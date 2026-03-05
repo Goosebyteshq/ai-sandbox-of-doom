@@ -22,6 +22,7 @@ docker-compose build --no-cache
 
 echo "==> Starting integration container"
 PROJECT_PATH="${REPO_ROOT}" PROJECT_NAME="integration" AGENT=claude \
+  AI_HOME_VOLUME="ai-dev-home-integration" \
   docker-compose -p "${COMPOSE_PROJECT_NAME}" up -d
 
 echo "==> Verifying installed CLIs and toolchain"

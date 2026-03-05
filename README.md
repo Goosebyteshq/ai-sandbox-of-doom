@@ -2,11 +2,26 @@
 
 Run Claude, Codex, or Gemini in YOLO/unsafe mode inside Docker, with only one project directory mounted.
 
+## Install the typed CLI
+
+```bash
+go install github.com/leomorpho/yolo-ai-dev-mode/cmd/ai-sandbox@latest
+```
+
+Then use:
+
+```bash
+ai-sandbox start --agent claude
+ai-sandbox connect --agent codex <project-name>
+```
+
+This project expects global CLI install only (no `go run` workflow).
+
 ## Why this setup
 
 - Agents can run with full autonomy in-container.
 - Only the project path you pass is bind-mounted to `/workspace/project`.
-- Agent home/config is stored in a Docker volume, not your host home.
+- Each project gets its own container runtime and its own home volume.
 - Go and Playwright workflows run inside the container.
 
 ## What is installed
@@ -28,25 +43,25 @@ Run Claude, Codex, or Gemini in YOLO/unsafe mode inside Docker, with only one pr
 Start in current directory with Claude:
 
 ```bash
-./start-agent.sh
+ai-sandbox start
 ```
 
 Start a specific project with Codex:
 
 ```bash
-./start-agent.sh --agent codex /path/to/project
+ai-sandbox start --agent codex /path/to/project
 ```
 
 Start with Gemini in detached mode:
 
 ```bash
-./start-agent.sh --agent gemini -d /path/to/project
+ai-sandbox start --agent gemini -d /path/to/project
 ```
 
 Reconnect to an existing container:
 
 ```bash
-./connect.sh --agent codex project-name
+ai-sandbox connect --agent codex project-name
 ```
 
 ## Agent shortcuts
@@ -57,12 +72,14 @@ Reconnect to an existing container:
 ./start-gemini.sh /path/to/project
 ```
 
+Shortcuts call the globally installed `ai-sandbox` binary.
+
 ## Safety model
 
 Container mounts:
 
 - `${PROJECT_PATH}:/workspace/project` (only host project mount)
-- `ai-dev-home:/home/developer` (Docker volume)
+- `${AI_HOME_VOLUME}:/home/developer` (project-specific Docker volume)
 - `/var/run/docker.sock` (for Docker CLI use inside container)
 
 ## Useful commands
