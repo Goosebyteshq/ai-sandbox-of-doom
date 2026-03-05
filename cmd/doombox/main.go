@@ -38,6 +38,8 @@ func main() {
 	switch os.Args[1] {
 	case "open":
 		err = c.runOpen(os.Args[2:])
+	case "start", "connect":
+		err = fmt.Errorf("`%s` was removed; use: doombox open --agent <claude|codex|gemini> /path/to/project", os.Args[1])
 	case "list":
 		err = c.runList(os.Args[2:])
 	case "-h", "--help", "help":
@@ -198,7 +200,7 @@ func projectNameFromContainerName(containerName string) string {
 
 func resolveProjectPathAndName(pos []string) (string, string, error) {
 	if len(pos) < 1 || strings.TrimSpace(pos[0]) == "" {
-		return "", "", errors.New("project path is required")
+		return "", "", errors.New("project path is required; use: doombox open --agent <claude|codex|gemini> /path/to/project")
 	}
 	projectPath := pos[0]
 	absPath, err := filepath.Abs(projectPath)
