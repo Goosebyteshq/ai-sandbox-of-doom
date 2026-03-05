@@ -26,6 +26,9 @@ RUN curl -fsSL https://deb.nodesource.com/setup_current.x | bash - \
 # Install PNPM package manager (latest version)
 RUN npm install -g pnpm@latest
 
+# Install AI coding CLIs
+RUN npm install -g @openai/codex @google/gemini-cli
+
 # Install latest Go
 RUN curl -fsSL https://go.dev/dl/go1.23.5.linux-amd64.tar.gz -o go.tar.gz \
     && tar -C /usr/local -xzf go.tar.gz \
@@ -35,6 +38,11 @@ RUN curl -fsSL https://go.dev/dl/go1.23.5.linux-amd64.tar.gz -o go.tar.gz \
 RUN curl -fsSL https://download.docker.com/linux/ubuntu/gpg | gpg --dearmor -o /usr/share/keyrings/docker-archive-keyring.gpg \
     && echo "deb [arch=$(dpkg --print-architecture) signed-by=/usr/share/keyrings/docker-archive-keyring.gpg] https://download.docker.com/linux/ubuntu $(lsb_release -cs) stable" | tee /etc/apt/sources.list.d/docker.list > /dev/null \
     && apt-get update && apt-get install -y docker-ce-cli && rm -rf /var/lib/apt/lists/*
+
+# Install Playwright browser + deps into a shared path for test runs
+ENV PLAYWRIGHT_BROWSERS_PATH=/ms-playwright
+RUN npx -y playwright@latest install --with-deps chromium \
+    && chmod -R a+rX /ms-playwright
 
 # Create a user for development
 RUN useradd -m -s /bin/bash developer && \

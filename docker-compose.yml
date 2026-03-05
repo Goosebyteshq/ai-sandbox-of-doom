@@ -1,18 +1,19 @@
 services:
-  claude-dev:
+  ai-dev:
     build: .
-    container_name: claude-dev-${PROJECT_NAME:-my-project}
+    container_name: ai-dev-${PROJECT_NAME:-my-project}
     volumes:
       # Mount Docker socket for docker-in-docker (optional)
       - /var/run/docker.sock:/var/run/docker.sock
-      # Mount host Claude directory for auth and config sharing
-      - ${HOME}/.claude:/home/developer/.claude
-      # Dynamic project mount - set via PROJECT_PATH environment variable
+      # Mount only the selected project directory
       - ${PROJECT_PATH:-./}:/workspace/project
+      # Persist agent auth/config inside Docker-managed volume
+      - ai-dev-home:/home/developer
     environment:
       - TERM=xterm-256color
       # Pass through any additional environment variables
       - PROJECT_NAME=${PROJECT_NAME:-my-project}
+      - AGENT=${AGENT:-claude}
     working_dir: /workspace/project
     stdin_open: true
     tty: true
@@ -22,4 +23,4 @@ services:
     #   - "8000:8000"
 
 volumes:
-  claude-dev-home:
+  ai-dev-home:
