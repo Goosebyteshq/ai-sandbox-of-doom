@@ -65,8 +65,8 @@ func printRootHelp() {
 	fmt.Println("AI Sandbox CLI")
 	fmt.Println("")
 	fmt.Println("Usage:")
-	fmt.Println("  ai-sandbox start [--agent claude|codex|gemini] [--detach] [PROJECT_PATH] [PROJECT_NAME]")
-	fmt.Println("  ai-sandbox connect [--agent claude|codex|gemini] [PROJECT_NAME]")
+	fmt.Println("  doombox start [--agent claude|codex|gemini] [--detach] [PROJECT_PATH] [PROJECT_NAME]")
+	fmt.Println("  doombox connect [--agent claude|codex|gemini] [PROJECT_NAME]")
 }
 
 func (c *cli) runStart(args []string) error {
@@ -331,7 +331,7 @@ func fatal(err error) {
 }
 
 func prepareRuntimeFiles() (runtimeDir string, composeFile string, cleanup func(), err error) {
-	runtimeDir, err = os.MkdirTemp("", "ai-sandbox-runtime-*")
+	runtimeDir, err = os.MkdirTemp("", "doombox-runtime-*")
 	if err != nil {
 		return "", "", nil, err
 	}

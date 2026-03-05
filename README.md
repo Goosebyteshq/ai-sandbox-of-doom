@@ -5,14 +5,14 @@ Run Claude, Codex, or Gemini in YOLO/unsafe mode inside Docker, with only one pr
 ## Install the typed CLI
 
 ```bash
-go install github.com/leomorpho/yolo-ai-dev-mode/cmd/ai-sandbox@latest
+go install github.com/leomorpho/yolo-ai-dev-mode/cmd/doombox@latest
 ```
 
 Then use:
 
 ```bash
-ai-sandbox start --agent claude
-ai-sandbox connect --agent codex <project-name>
+doombox start --agent claude
+doombox connect --agent codex <project-name>
 ```
 
 This project expects global CLI install only (no `go run` workflow).
@@ -43,25 +43,25 @@ This project expects global CLI install only (no `go run` workflow).
 Start in current directory with Claude:
 
 ```bash
-ai-sandbox start
+doombox start
 ```
 
 Start a specific project with Codex:
 
 ```bash
-ai-sandbox start --agent codex /path/to/project
+doombox start --agent codex /path/to/project
 ```
 
 Start with Gemini in detached mode:
 
 ```bash
-ai-sandbox start --agent gemini -d /path/to/project
+doombox start --agent gemini -d /path/to/project
 ```
 
 Reconnect to an existing container:
 
 ```bash
-ai-sandbox connect --agent codex project-name
+doombox connect --agent codex project-name
 ```
 
 ## Agent shortcuts
@@ -72,7 +72,7 @@ ai-sandbox connect --agent codex project-name
 ./start-gemini.sh /path/to/project
 ```
 
-Shortcuts call the globally installed `ai-sandbox` binary.
+Shortcuts call the globally installed `doombox` binary.
 
 ## Safety model
 
@@ -129,7 +129,6 @@ lefthook install
 ```
 
 - `pre-commit`: `gofmt`, fast checks, unit tests
-- `pre-push`: full integration suite
 - GitHub Actions CI runs both fast checks and integration on every PR/push
 
 ## Inside container examples

@@ -2,11 +2,11 @@
 
 set -euo pipefail
 
-if ! command -v ai-sandbox >/dev/null 2>&1; then
-  echo "ai-sandbox is not installed."
+if ! command -v doombox >/dev/null 2>&1; then
+  echo "doombox is not installed."
   echo "Install it globally with:"
-  echo "  go install github.com/leomorpho/yolo-ai-dev-mode/cmd/ai-sandbox@latest"
+  echo "  go install github.com/leomorpho/yolo-ai-dev-mode/cmd/doombox@latest"
   exit 1
 fi
 
-exec ai-sandbox start "$@"
+exec doombox start "$@"

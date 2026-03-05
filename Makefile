@@ -3,10 +3,10 @@ SHELL := /bin/bash
 .PHONY: install-cli build-cli test fast-check test-integration
 
 install-cli:
-	go install ./cmd/ai-sandbox
+	go install ./cmd/doombox
 
 build-cli:
-	go build ./cmd/ai-sandbox
+	go build ./cmd/doombox
 
 test:
 	go test ./...

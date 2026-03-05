@@ -1,11 +1,6 @@
 pre-commit:
   commands:
     gofmt:
-      run: gofmt -w cmd/ai-sandbox/main.go cmd/ai-sandbox/main_test.go
+      run: gofmt -w cmd/doombox/main.go cmd/doombox/main_test.go
     fast-check:
       run: ./scripts/check-fast.sh
-
-pre-push:
-  commands:
-    integration:
-      run: make test-integration
