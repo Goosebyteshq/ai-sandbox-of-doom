@@ -2,10 +2,12 @@ package main
 
 import (
 	"crypto/sha1"
+	"embed"
 	"encoding/hex"
 	"errors"
 	"flag"
 	"fmt"
+	"io/fs"
 	"os"
 	"os/exec"
 	"path/filepath"
@@ -17,6 +19,9 @@ type cli struct {
 	composeBin  string
 	composeArgs []string
 }
+
+//go:embed assets/*
+var runtimeAssets embed.FS
 
 func main() {
 	c, err := newCLI()
@@ -117,11 +122,18 @@ func (c *cli) runStart(args []string) error {
 		return err
 	}
 
-	if err := c.run("docker", []string{"info"}, nil); err != nil {
+	if _, err := c.capture("docker", []string{"info", "--format", "{{.ServerVersion}}"}, nil); err != nil {
 		return errors.New("docker is not running")
 	}
 
+	runtimeDir, composeFile, cleanup, err := prepareRuntimeFiles()
+	if err != nil {
+		return err
+	}
+	defer cleanup()
+
 	env := composeEnv(absPath, projectName, *agent)
+	env = append(env, "AI_SANDBOX_RUNTIME_DIR="+runtimeDir)
 	containerName := "ai-dev-" + projectName
 	composeProject := "ai-dev-" + projectName
 
@@ -140,12 +152,12 @@ func (c *cli) runStart(args []string) error {
 		fmt.Println("Container already running, reusing existing container.")
 	} else {
 		fmt.Println("Building container...")
-		if err := c.compose([]string{"-p", composeProject, "build"}, env); err != nil {
+		if err := c.compose(composeFile, []string{"-p", composeProject, "build"}, env); err != nil {
 			return err
 		}
 
 		fmt.Println("Starting container...")
-		if err := c.compose([]string{"-p", composeProject, "up", "-d"}, env); err != nil {
+		if err := c.compose(composeFile, []string{"-p", composeProject, "up", "-d"}, env); err != nil {
 			return err
 		}
 		fmt.Println("Container started.")
@@ -155,7 +167,7 @@ func (c *cli) runStart(args []string) error {
 
 	if *interactive {
 		fmt.Printf("Launching %s...\n\n", *agent)
-		return c.compose([]string{"-p", composeProject, "exec", "ai-dev", "bash", "-lc", agentCmd}, env)
+		return c.compose(composeFile, []string{"-p", composeProject, "exec", "ai-dev", "bash", "-lc", agentCmd}, env)
 	}
 
 	fmt.Println("Container running in background.")
@@ -231,8 +243,9 @@ func composeEnv(projectPath, projectName, agent string) []string {
 	return env
 }
 
-func (c *cli) compose(args []string, env []string) error {
+func (c *cli) compose(composeFile string, args []string, env []string) error {
 	full := append([]string{}, c.composeArgs...)
+	full = append(full, "-f", composeFile)
 	full = append(full, args...)
 	return c.run(c.composeBin, full, env)
 }
@@ -315,4 +328,40 @@ func envOr(key, fallback string) string {
 func fatal(err error) {
 	fmt.Fprintf(os.Stderr, "error: %v\n", err)
 	os.Exit(1)
+}
+
+func prepareRuntimeFiles() (runtimeDir string, composeFile string, cleanup func(), err error) {
+	runtimeDir, err = os.MkdirTemp("", "ai-sandbox-runtime-*")
+	if err != nil {
+		return "", "", nil, err
+	}
+
+	cleanup = func() {
+		_ = os.RemoveAll(runtimeDir)
+	}
+
+	files := []struct {
+		src  string
+		dst  string
+		mode fs.FileMode
+	}{
+		{src: "assets/docker-compose.yml", dst: "docker-compose.yml", mode: 0644},
+		{src: "assets/Dockerfile", dst: "Dockerfile", mode: 0644},
+		{src: "assets/entrypoint.sh", dst: "entrypoint.sh", mode: 0755},
+	}
+
+	for _, f := range files {
+		data, readErr := runtimeAssets.ReadFile(f.src)
+		if readErr != nil {
+			cleanup()
+			return "", "", nil, fmt.Errorf("read embedded asset %s: %w", f.src, readErr)
+		}
+		target := filepath.Join(runtimeDir, f.dst)
+		if writeErr := os.WriteFile(target, data, f.mode); writeErr != nil {
+			cleanup()
+			return "", "", nil, fmt.Errorf("write runtime asset %s: %w", f.dst, writeErr)
+		}
+	}
+
+	return runtimeDir, filepath.Join(runtimeDir, "docker-compose.yml"), cleanup, nil
 }

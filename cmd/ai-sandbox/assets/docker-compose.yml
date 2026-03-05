@@ -1,0 +1,27 @@
+services:
+  ai-dev:
+    build: .
+    container_name: ai-dev-${PROJECT_NAME:-my-project}
+    volumes:
+      # Mount Docker socket for docker-in-docker (optional)
+      - /var/run/docker.sock:/var/run/docker.sock
+      # Mount only the selected project directory
+      - ${PROJECT_PATH:-./}:/workspace/project
+      # Persist agent auth/config inside Docker-managed volume
+      - ai-dev-home:/home/developer
+    environment:
+      - TERM=xterm-256color
+      # Pass through any additional environment variables
+      - PROJECT_NAME=${PROJECT_NAME:-my-project}
+      - AGENT=${AGENT:-claude}
+    working_dir: /workspace/project
+    stdin_open: true
+    tty: true
+    # Uncomment if you need specific ports
+    # ports:
+    #   - "3000:3000"
+    #   - "8000:8000"
+
+volumes:
+  ai-dev-home:
+    name: ${AI_HOME_VOLUME:-ai-dev-home}
