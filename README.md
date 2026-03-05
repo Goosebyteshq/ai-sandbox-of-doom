@@ -96,6 +96,12 @@ Run the full integration suite:
 make test-integration
 ```
 
+Run fast local checks (format/lint/unit/config):
+
+```bash
+make fast-check
+```
+
 Keep the integration container running after tests:
 
 ```bash
@@ -113,6 +119,18 @@ Open shell in a container:
 ```bash
 docker exec -it ai-dev-<project-name> bash
 ```
+
+## Hooks and CI
+
+Install Lefthook hooks:
+
+```bash
+lefthook install
+```
+
+- `pre-commit`: `gofmt`, fast checks, unit tests
+- `pre-push`: full integration suite
+- GitHub Actions CI runs both fast checks and integration on every PR/push
 
 ## Inside container examples
 

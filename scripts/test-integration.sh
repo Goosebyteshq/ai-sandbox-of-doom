@@ -8,22 +8,41 @@ REPO_ROOT="$(cd "${SCRIPT_DIR}/.." && pwd)"
 COMPOSE_PROJECT_NAME="ai-dev-integration"
 CONTAINER_NAME="ai-dev-integration"
 
+compose_cmd() {
+  if command -v docker-compose >/dev/null 2>&1; then
+    echo "docker-compose"
+    return
+  fi
+  if command -v docker >/dev/null 2>&1 && docker compose version >/dev/null 2>&1; then
+    echo "docker compose"
+    return
+  fi
+  echo ""
+}
+
+COMPOSE="$(compose_cmd)"
+if [[ -z "${COMPOSE}" ]]; then
+  echo "docker compose not found"
+  exit 1
+fi
+
 cleanup() {
   if [[ "${KEEP_INTEGRATION_CONTAINER:-0}" != "1" ]]; then
     PROJECT_PATH="${REPO_ROOT}" PROJECT_NAME="integration" AGENT=claude \
-      docker-compose -p "${COMPOSE_PROJECT_NAME}" down >/dev/null 2>&1 || true
+      AI_HOME_VOLUME="ai-dev-home-integration" \
+      ${COMPOSE} -p "${COMPOSE_PROJECT_NAME}" down >/dev/null 2>&1 || true
   fi
 }
 
 trap cleanup EXIT
 
 echo "==> Building image (no cache)"
-docker-compose build --no-cache
+${COMPOSE} build --no-cache
 
 echo "==> Starting integration container"
 PROJECT_PATH="${REPO_ROOT}" PROJECT_NAME="integration" AGENT=claude \
   AI_HOME_VOLUME="ai-dev-home-integration" \
-  docker-compose -p "${COMPOSE_PROJECT_NAME}" up -d
+  ${COMPOSE} -p "${COMPOSE_PROJECT_NAME}" up -d
 
 echo "==> Verifying installed CLIs and toolchain"
 docker exec "${CONTAINER_NAME}" bash -lc '

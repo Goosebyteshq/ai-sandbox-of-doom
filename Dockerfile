@@ -105,8 +105,9 @@ ENV PATH="/home/developer/.local/bin:/usr/local/go/bin:$PATH"
 ENV GOPATH="/home/developer/go"
 
 # Add standard command names for Debian/Ubuntu variants
-RUN ln -sf /usr/bin/batcat /usr/local/bin/bat \
-    && ln -sf /usr/bin/fdfind /usr/local/bin/fd
+RUN mkdir -p /home/developer/.local/bin \
+    && ln -sf /usr/bin/batcat /home/developer/.local/bin/bat \
+    && ln -sf /usr/bin/fdfind /home/developer/.local/bin/fd
 
 # Copy entrypoint script
 COPY --chown=developer:developer entrypoint.sh /home/developer/entrypoint.sh
