@@ -37,6 +37,8 @@ func main() {
 	switch os.Args[1] {
 	case "start":
 		err = c.runStart(os.Args[2:])
+	case "open":
+		err = c.runOpen(os.Args[2:])
 	case "connect":
 		err = c.runConnect(os.Args[2:])
 	case "-h", "--help", "help":
@@ -65,7 +67,8 @@ func printRootHelp() {
 	fmt.Println("AI Sandbox CLI")
 	fmt.Println("")
 	fmt.Println("Usage:")
-	fmt.Println("  doombox start [--agent claude|codex|gemini] [--detach] [PROJECT_PATH] [PROJECT_NAME]")
+	fmt.Println("  doombox start [--agent claude|codex|gemini] [--detach] PROJECT_PATH [PROJECT_NAME]")
+	fmt.Println("  doombox open [--agent claude|codex|gemini] [--detach] PROJECT_PATH [PROJECT_NAME]")
 	fmt.Println("  doombox connect [--agent claude|codex|gemini] [PROJECT_NAME]")
 }
 
@@ -86,94 +89,50 @@ func (c *cli) runStart(args []string) error {
 		*interactive = false
 	}
 
-	pos := fs.Args()
-	projectPath := envOr("PROJECT_PATH", "")
-	if len(pos) >= 1 {
-		projectPath = pos[0]
-	}
-	if projectPath == "" {
-		cwd, err := os.Getwd()
-		if err != nil {
-			return err
-		}
-		projectPath = cwd
-	}
-
-	absPath, err := filepath.Abs(projectPath)
+	absPath, projectName, err := resolveProjectPathAndName(fs.Args())
 	if err != nil {
 		return err
 	}
-	info, err := os.Stat(absPath)
-	if err != nil || !info.IsDir() {
-		return fmt.Errorf("project path does not exist: %s", absPath)
+	return c.startOrReuseSession(*agent, absPath, projectName, *interactive)
+}
+
+func (c *cli) runOpen(args []string) error {
+	fs := flag.NewFlagSet("open", flag.ContinueOnError)
+	fs.SetOutput(os.Stdout)
+	agent := fs.String("agent", envOr("AGENT", "claude"), "agent: claude|codex|gemini")
+	fs.StringVar(agent, "a", envOr("AGENT", "claude"), "agent: claude|codex|gemini")
+	detach := fs.Bool("detach", false, "connect if running; otherwise start container and exit")
+	fs.BoolVar(detach, "d", false, "connect if running; otherwise start container and exit")
+	interactive := fs.Bool("interactive", true, "connect if running; otherwise start and connect")
+	fs.BoolVar(interactive, "i", true, "connect if running; otherwise start and connect")
+	if err := fs.Parse(args); err != nil {
+		return err
+	}
+	if *detach {
+		*interactive = false
 	}
 
-	projectName := envOr("PROJECT_NAME", "")
-	if len(pos) >= 2 {
-		projectName = pos[1]
+	absPath, projectName, err := resolveProjectPathAndName(fs.Args())
+	if err != nil {
+		return err
 	}
-	if projectName == "" {
-		projectName = defaultProjectName(absPath)
-	}
-	projectName = sanitizeProjectName(projectName)
 
 	agentCmd, err := commandForAgent(*agent, os.Getenv("AGENT_CMD"))
 	if err != nil {
 		return err
 	}
 
-	if _, err := c.capture("docker", []string{"info", "--format", "{{.ServerVersion}}"}, nil); err != nil {
-		return errors.New("docker is not running")
-	}
-
-	runtimeDir, composeFile, cleanup, err := prepareRuntimeFiles()
-	if err != nil {
-		return err
-	}
-	defer cleanup()
-
-	env := composeEnv(absPath, projectName, *agent)
-	env = append(env, "AI_SANDBOX_RUNTIME_DIR="+runtimeDir)
 	containerName := "ai-dev-" + projectName
-	composeProject := "ai-dev-" + projectName
-
-	fmt.Println("AI Dev Docker Environment")
-	fmt.Println("=========================")
-	fmt.Printf("Project Path: %s\n", absPath)
-	fmt.Printf("Project Name: %s\n", projectName)
-	fmt.Printf("Agent: %s\n\n", *agent)
-
 	running, err := c.containerRunning(containerName)
 	if err != nil {
 		return err
 	}
-
 	if running {
-		fmt.Println("Container already running, reusing existing container.")
-	} else {
-		fmt.Println("Building container...")
-		if err := c.compose(composeFile, []string{"-p", composeProject, "build"}, env); err != nil {
-			return err
-		}
-
-		fmt.Println("Starting container...")
-		if err := c.compose(composeFile, []string{"-p", composeProject, "up", "-d"}, env); err != nil {
-			return err
-		}
-		fmt.Println("Container started.")
+		fmt.Printf("Connecting to %s for project: %s\n", *agent, projectName)
+		return c.run("docker", []string{"exec", "-it", containerName, "bash", "-lc", agentCmd}, nil)
 	}
 
-	fmt.Printf("\nProject mount:\n  %s -> /workspace/project\n\n", absPath)
-
-	if *interactive {
-		fmt.Printf("Launching %s...\n\n", *agent)
-		return c.compose(composeFile, []string{"-p", composeProject, "exec", "ai-dev", "bash", "-lc", agentCmd}, env)
-	}
-
-	fmt.Println("Container running in background.")
-	fmt.Println("Connect with:")
-	fmt.Printf("  ./connect.sh --agent %s %s\n", *agent, projectName)
-	return nil
+	return c.startOrReuseSession(*agent, absPath, projectName, *interactive)
 }
 
 func (c *cli) runConnect(args []string) error {
@@ -230,6 +189,89 @@ func commandForAgent(agent, override string) (string, error) {
 	default:
 		return "", fmt.Errorf("unsupported agent %q (expected claude, codex, gemini)", agent)
 	}
+}
+
+func resolveProjectPathAndName(pos []string) (string, string, error) {
+	if len(pos) < 1 || strings.TrimSpace(pos[0]) == "" {
+		return "", "", errors.New("project path is required")
+	}
+	projectPath := pos[0]
+	absPath, err := filepath.Abs(projectPath)
+	if err != nil {
+		return "", "", err
+	}
+	info, err := os.Stat(absPath)
+	if err != nil || !info.IsDir() {
+		return "", "", fmt.Errorf("project path does not exist: %s", absPath)
+	}
+	projectName := envOr("PROJECT_NAME", "")
+	if len(pos) >= 2 {
+		projectName = pos[1]
+	}
+	if projectName == "" {
+		projectName = defaultProjectName(absPath)
+	}
+	return absPath, sanitizeProjectName(projectName), nil
+}
+
+func (c *cli) startOrReuseSession(agent, absPath, projectName string, interactive bool) error {
+	agentCmd, err := commandForAgent(agent, os.Getenv("AGENT_CMD"))
+	if err != nil {
+		return err
+	}
+
+	if _, err := c.capture("docker", []string{"info", "--format", "{{.ServerVersion}}"}, nil); err != nil {
+		return errors.New("docker is not running")
+	}
+
+	runtimeDir, composeFile, cleanup, err := prepareRuntimeFiles()
+	if err != nil {
+		return err
+	}
+	defer cleanup()
+
+	env := composeEnv(absPath, projectName, agent)
+	env = append(env, "AI_SANDBOX_RUNTIME_DIR="+runtimeDir)
+	containerName := "ai-dev-" + projectName
+	composeProject := "ai-dev-" + projectName
+
+	fmt.Println("AI Dev Docker Environment")
+	fmt.Println("=========================")
+	fmt.Printf("Project Path: %s\n", absPath)
+	fmt.Printf("Project Name: %s\n", projectName)
+	fmt.Printf("Agent: %s\n\n", agent)
+
+	running, err := c.containerRunning(containerName)
+	if err != nil {
+		return err
+	}
+
+	if running {
+		fmt.Println("Container already running, reusing existing container.")
+	} else {
+		fmt.Println("Building container...")
+		if err := c.compose(composeFile, []string{"-p", composeProject, "build"}, env); err != nil {
+			return err
+		}
+
+		fmt.Println("Starting container...")
+		if err := c.compose(composeFile, []string{"-p", composeProject, "up", "-d"}, env); err != nil {
+			return err
+		}
+		fmt.Println("Container started.")
+	}
+
+	fmt.Printf("\nProject mount:\n  %s -> /workspace/project\n\n", absPath)
+
+	if interactive {
+		fmt.Printf("Launching %s...\n\n", agent)
+		return c.compose(composeFile, []string{"-p", composeProject, "exec", "ai-dev", "bash", "-lc", agentCmd}, env)
+	}
+
+	fmt.Println("Container running in background.")
+	fmt.Println("Connect with:")
+	fmt.Printf("  doombox connect --agent %s %s\n", agent, projectName)
+	return nil
 }
 
 func composeEnv(projectPath, projectName, agent string) []string {

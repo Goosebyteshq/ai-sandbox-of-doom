@@ -12,6 +12,7 @@ Then use:
 
 ```bash
 doombox start --agent claude
+doombox open --agent codex /path/to/project
 doombox connect --agent codex <project-name>
 ```
 
@@ -43,13 +44,19 @@ This project expects global CLI install only (no `go run` workflow).
 Start in current directory with Claude:
 
 ```bash
-doombox start
+doombox start /path/to/project
 ```
 
 Start a specific project with Codex:
 
 ```bash
 doombox start --agent codex /path/to/project
+```
+
+Open (connect if running, otherwise start):
+
+```bash
+doombox open --agent codex /path/to/project
 ```
 
 Start with Gemini in detached mode:

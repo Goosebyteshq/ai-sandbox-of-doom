@@ -122,3 +122,33 @@ func TestEnvOr(t *testing.T) {
 		t.Fatalf("expected env value, got %q", got)
 	}
 }
+
+func TestResolveProjectPathAndNameRequiresPath(t *testing.T) {
+	_, _, err := resolveProjectPathAndName(nil)
+	if err == nil {
+		t.Fatal("expected error when project path is missing")
+	}
+	if !strings.Contains(err.Error(), "project path is required") {
+		t.Fatalf("unexpected error: %v", err)
+	}
+}
+
+func TestResolveProjectPathAndName(t *testing.T) {
+	projectDir := t.TempDir()
+	absDir, err := filepath.Abs(projectDir)
+	if err != nil {
+		t.Fatalf("abs: %v", err)
+	}
+
+	name := "Custom Name"
+	gotPath, gotName, err := resolveProjectPathAndName([]string{projectDir, name})
+	if err != nil {
+		t.Fatalf("resolveProjectPathAndName returned error: %v", err)
+	}
+	if gotPath != absDir {
+		t.Fatalf("got path %q, want %q", gotPath, absDir)
+	}
+	if gotName != "custom-name" {
+		t.Fatalf("got project name %q, want custom-name", gotName)
+	}
+}
