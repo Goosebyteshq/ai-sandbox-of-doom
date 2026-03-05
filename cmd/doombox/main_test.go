@@ -152,3 +152,22 @@ func TestResolveProjectPathAndName(t *testing.T) {
 		t.Fatalf("got project name %q, want custom-name", gotName)
 	}
 }
+
+func TestParseDoomboxContainerRows(t *testing.T) {
+	out := strings.Join([]string{
+		"ai-dev-alpha\tUp 2 minutes\tyolo-ai-dev-mode-ai-dev",
+		"unrelated\tUp 10 minutes\tnginx:latest",
+		"ai-dev-beta\tExited (0) 1 hour ago\tyolo-ai-dev-mode-ai-dev",
+	}, "\n")
+
+	rows := parseDoomboxContainerRows(out)
+	if len(rows) != 2 {
+		t.Fatalf("expected 2 rows, got %d", len(rows))
+	}
+	if rows[0].Project != "alpha" {
+		t.Fatalf("unexpected first project: %q", rows[0].Project)
+	}
+	if rows[1].Project != "beta" {
+		t.Fatalf("unexpected second project: %q", rows[1].Project)
+	}
+}

@@ -11,9 +11,8 @@ go install github.com/Goosebyteshq/doombox/cmd/doombox@latest
 Then use:
 
 ```bash
-doombox start --agent claude
 doombox open --agent codex /path/to/project
-doombox connect --agent codex <project-name>
+doombox list
 ```
 
 This project expects global CLI install only (no `go run` workflow).
@@ -41,16 +40,16 @@ This project expects global CLI install only (no `go run` workflow).
 
 ## Quick start
 
-Start in current directory with Claude:
+Open a project with Claude:
 
 ```bash
-doombox start /path/to/project
+doombox open --agent claude /path/to/project
 ```
 
-Start a specific project with Codex:
+Open a specific project with Codex:
 
 ```bash
-doombox start --agent codex /path/to/project
+doombox open --agent codex /path/to/project
 ```
 
 Open (connect if running, otherwise start):
@@ -62,14 +61,10 @@ doombox open --agent codex /path/to/project
 Start with Gemini in detached mode:
 
 ```bash
-doombox start --agent gemini -d /path/to/project
+doombox open --agent gemini -d /path/to/project
 ```
 
-Reconnect to an existing container:
-
-```bash
-doombox connect --agent codex project-name
-```
+No aliases: use `doombox open ...` directly.
 
 ## Agent shortcuts
 
@@ -118,7 +113,8 @@ KEEP_INTEGRATION_CONTAINER=1 make test-integration
 See running containers:
 
 ```bash
-docker ps --filter "name=ai-dev-"
+doombox list
+doombox list --all
 ```
 
 Open shell in a container:

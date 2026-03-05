@@ -12,6 +12,7 @@ import (
 	"os/exec"
 	"path/filepath"
 	"regexp"
+	"sort"
 	"strings"
 )
 
@@ -35,12 +36,10 @@ func main() {
 	}
 
 	switch os.Args[1] {
-	case "start":
-		err = c.runStart(os.Args[2:])
 	case "open":
 		err = c.runOpen(os.Args[2:])
-	case "connect":
-		err = c.runConnect(os.Args[2:])
+	case "list":
+		err = c.runList(os.Args[2:])
 	case "-h", "--help", "help":
 		printRootHelp()
 		return
@@ -67,33 +66,8 @@ func printRootHelp() {
 	fmt.Println("AI Sandbox CLI")
 	fmt.Println("")
 	fmt.Println("Usage:")
-	fmt.Println("  doombox start [--agent claude|codex|gemini] [--detach] PROJECT_PATH [PROJECT_NAME]")
 	fmt.Println("  doombox open [--agent claude|codex|gemini] [--detach] PROJECT_PATH [PROJECT_NAME]")
-	fmt.Println("  doombox connect [--agent claude|codex|gemini] [PROJECT_NAME]")
-}
-
-func (c *cli) runStart(args []string) error {
-	fs := flag.NewFlagSet("start", flag.ContinueOnError)
-	fs.SetOutput(os.Stdout)
-	agent := fs.String("agent", envOr("AGENT", "claude"), "agent: claude|codex|gemini")
-	fs.StringVar(agent, "a", envOr("AGENT", "claude"), "agent: claude|codex|gemini")
-	detach := fs.Bool("detach", false, "start container and exit")
-	fs.BoolVar(detach, "d", false, "start container and exit")
-	interactive := fs.Bool("interactive", true, "start and connect")
-	fs.BoolVar(interactive, "i", true, "start and connect")
-	if err := fs.Parse(args); err != nil {
-		return err
-	}
-
-	if *detach {
-		*interactive = false
-	}
-
-	absPath, projectName, err := resolveProjectPathAndName(fs.Args())
-	if err != nil {
-		return err
-	}
-	return c.startOrReuseSession(*agent, absPath, projectName, *interactive)
+	fmt.Println("  doombox list [--all]")
 }
 
 func (c *cli) runOpen(args []string) error {
@@ -135,44 +109,39 @@ func (c *cli) runOpen(args []string) error {
 	return c.startOrReuseSession(*agent, absPath, projectName, *interactive)
 }
 
-func (c *cli) runConnect(args []string) error {
-	fs := flag.NewFlagSet("connect", flag.ContinueOnError)
+func (c *cli) runList(args []string) error {
+	fs := flag.NewFlagSet("list", flag.ContinueOnError)
 	fs.SetOutput(os.Stdout)
-	agent := fs.String("agent", envOr("AGENT", "claude"), "agent: claude|codex|gemini")
-	fs.StringVar(agent, "a", envOr("AGENT", "claude"), "agent: claude|codex|gemini")
+	all := fs.Bool("all", false, "include stopped containers")
 	if err := fs.Parse(args); err != nil {
 		return err
 	}
 
-	var projectName string
-	if len(fs.Args()) >= 1 {
-		projectName = fs.Args()[0]
-	} else {
-		cwd, err := os.Getwd()
-		if err != nil {
-			return err
+	psArgs := []string{"ps", "--filter", "name=^ai-dev-", "--format", "{{.Names}}\t{{.Status}}\t{{.Image}}"}
+	if *all {
+		psArgs = append([]string{"ps", "-a"}, psArgs[2:]...)
+	}
+	out, err := c.capture("docker", psArgs, nil)
+	if err != nil {
+		return err
+	}
+
+	rows := parseDoomboxContainerRows(out)
+	if len(rows) == 0 {
+		if *all {
+			fmt.Println("No doombox containers found.")
+		} else {
+			fmt.Println("No running doombox containers found.")
 		}
-		projectName = defaultProjectName(cwd)
+		return nil
 	}
-	projectName = sanitizeProjectName(projectName)
+	sort.Slice(rows, func(i, j int) bool { return rows[i].Name < rows[j].Name })
 
-	agentCmd, err := commandForAgent(*agent, os.Getenv("AGENT_CMD"))
-	if err != nil {
-		return err
+	fmt.Println("NAME\tPROJECT\tSTATUS\tIMAGE")
+	for _, row := range rows {
+		fmt.Printf("%s\t%s\t%s\t%s\n", row.Name, row.Project, row.Status, row.Image)
 	}
-
-	containerName := "ai-dev-" + projectName
-	fmt.Printf("Connecting to %s for project: %s\n", *agent, projectName)
-
-	running, err := c.containerRunning(containerName)
-	if err != nil {
-		return err
-	}
-	if !running {
-		return fmt.Errorf("no running container found for project: %s", projectName)
-	}
-
-	return c.run("docker", []string{"exec", "-it", containerName, "bash", "-lc", agentCmd}, nil)
+	return nil
 }
 
 func commandForAgent(agent, override string) (string, error) {
@@ -189,6 +158,42 @@ func commandForAgent(agent, override string) (string, error) {
 	default:
 		return "", fmt.Errorf("unsupported agent %q (expected claude, codex, gemini)", agent)
 	}
+}
+
+type containerRow struct {
+	Name    string
+	Project string
+	Status  string
+	Image   string
+}
+
+func parseDoomboxContainerRows(out string) []containerRow {
+	rows := []containerRow{}
+	for _, line := range strings.Split(strings.TrimSpace(out), "\n") {
+		line = strings.TrimSpace(line)
+		if line == "" {
+			continue
+		}
+		parts := strings.Split(line, "\t")
+		if len(parts) < 3 {
+			continue
+		}
+		name := strings.TrimSpace(parts[0])
+		if !strings.HasPrefix(name, "ai-dev-") {
+			continue
+		}
+		rows = append(rows, containerRow{
+			Name:    name,
+			Project: projectNameFromContainerName(name),
+			Status:  strings.TrimSpace(parts[1]),
+			Image:   strings.TrimSpace(parts[2]),
+		})
+	}
+	return rows
+}
+
+func projectNameFromContainerName(containerName string) string {
+	return strings.TrimPrefix(containerName, "ai-dev-")
 }
 
 func resolveProjectPathAndName(pos []string) (string, string, error) {
@@ -270,7 +275,7 @@ func (c *cli) startOrReuseSession(agent, absPath, projectName string, interactiv
 
 	fmt.Println("Container running in background.")
 	fmt.Println("Connect with:")
-	fmt.Printf("  doombox connect --agent %s %s\n", agent, projectName)
+	fmt.Printf("  doombox open --agent %s %s\n", agent, absPath)
 	return nil
 }
 
