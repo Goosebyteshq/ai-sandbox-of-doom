@@ -14,6 +14,10 @@ Run Claude, Codex, or Gemini in YOLO/unsafe mode inside Docker, with only one pr
 - Claude Code CLI
 - OpenAI Codex CLI
 - Gemini CLI
+- GitHub CLI (`gh`)
+- Fast search/navigation: `ripgrep`, `fd`, `bat`, `fzf`
+- Data helpers: `jq`, `yq`
+- Shell/productivity: `tmux`, `tree`, `entr`, `direnv`, `shellcheck`
 - Go 1.23.5
 - Node.js + pnpm
 - Python3 + uv

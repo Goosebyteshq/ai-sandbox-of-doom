@@ -16,6 +16,25 @@ RUN apt-get update && apt-get install -y \
     lsb-release \
     sudo \
     vim \
+    jq \
+    ripgrep \
+    fd-find \
+    bat \
+    fzf \
+    tmux \
+    tree \
+    entr \
+    direnv \
+    shellcheck \
+    && rm -rf /var/lib/apt/lists/*
+
+# Add GitHub CLI apt repository and install gh
+RUN mkdir -p -m 755 /etc/apt/keyrings \
+    && wget -qO- https://cli.github.com/packages/githubcli-archive-keyring.gpg | tee /etc/apt/keyrings/githubcli-archive-keyring.gpg > /dev/null \
+    && chmod go+r /etc/apt/keyrings/githubcli-archive-keyring.gpg \
+    && echo "deb [arch=$(dpkg --print-architecture) signed-by=/etc/apt/keyrings/githubcli-archive-keyring.gpg] https://cli.github.com/packages stable main" > /etc/apt/sources.list.d/github-cli.list \
+    && apt-get update \
+    && apt-get install -y gh \
     && rm -rf /var/lib/apt/lists/*
 
 # Install latest Node.js via NodeSource repository (current version)
@@ -28,6 +47,16 @@ RUN npm install -g pnpm@latest
 
 # Install AI coding CLIs
 RUN npm install -g @openai/codex @google/gemini-cli
+
+# Install yq binary (mikefarah/yq)
+RUN ARCH="$(dpkg --print-architecture)" \
+    && case "${ARCH}" in \
+        amd64) YQ_ARCH="amd64" ;; \
+        arm64) YQ_ARCH="arm64" ;; \
+        *) echo "Unsupported architecture: ${ARCH}" && exit 1 ;; \
+    esac \
+    && wget -qO /usr/local/bin/yq "https://github.com/mikefarah/yq/releases/latest/download/yq_linux_${YQ_ARCH}" \
+    && chmod +x /usr/local/bin/yq
 
 # Install latest Go
 RUN curl -fsSL https://go.dev/dl/go1.23.5.linux-amd64.tar.gz -o go.tar.gz \
@@ -64,7 +93,9 @@ RUN curl -LsSf https://astral.sh/uv/install.sh | HOME=/home/developer sh
 # Set up environment variables for PATH
 RUN echo 'export PATH="/home/developer/.local/bin:/usr/local/go/bin:$PATH"' >> /home/developer/.bashrc && \
     echo 'export GOPATH=/home/developer/go' >> /home/developer/.bashrc && \
-    echo 'export PATH="$GOPATH/bin:$PATH"' >> /home/developer/.bashrc
+    echo 'export PATH="$GOPATH/bin:$PATH"' >> /home/developer/.bashrc && \
+    echo 'alias bat=batcat' >> /home/developer/.bashrc && \
+    echo 'alias fd=fdfind' >> /home/developer/.bashrc
 
 # Ensure the PATH is set for interactive shells
 RUN echo 'if [ -f ~/.bashrc ]; then source ~/.bashrc; fi' >> /home/developer/.bash_profile
@@ -72,6 +103,10 @@ RUN echo 'if [ -f ~/.bashrc ]; then source ~/.bashrc; fi' >> /home/developer/.ba
 # Ensure Claude CLI is in PATH for this build
 ENV PATH="/home/developer/.local/bin:/usr/local/go/bin:$PATH"
 ENV GOPATH="/home/developer/go"
+
+# Add standard command names for Debian/Ubuntu variants
+RUN ln -sf /usr/bin/batcat /usr/local/bin/bat \
+    && ln -sf /usr/bin/fdfind /usr/local/bin/fd
 
 # Copy entrypoint script
 COPY --chown=developer:developer entrypoint.sh /home/developer/entrypoint.sh
