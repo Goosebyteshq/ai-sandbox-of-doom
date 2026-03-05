@@ -5,7 +5,7 @@ Run Claude, Codex, or Gemini in YOLO/unsafe mode inside Docker, with only one pr
 ## Install the typed CLI
 
 ```bash
-go install github.com/leomorpho/yolo-ai-dev-mode/cmd/doombox@latest
+go install github.com/Goosebyteshq/doombox/cmd/doombox@latest
 ```
 
 Then use:

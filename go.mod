@@ -1,3 +1,3 @@
-module github.com/leomorpho/yolo-ai-dev-mode
+module github.com/Goosebyteshq/doombox
 
 go 1.23.5
