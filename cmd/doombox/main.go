@@ -39,7 +39,7 @@ func main() {
 	case "open":
 		err = c.runOpen(os.Args[2:])
 	case "start", "connect":
-		err = fmt.Errorf("`%s` was removed; use: doombox open --agent <claude|codex|gemini> /path/to/project", os.Args[1])
+		err = c.runOpen(os.Args[2:])
 	case "list":
 		err = c.runList(os.Args[2:])
 	case "-h", "--help", "help":
@@ -69,6 +69,8 @@ func printRootHelp() {
 	fmt.Println("")
 	fmt.Println("Usage:")
 	fmt.Println("  doombox open [--agent claude|codex|gemini] [--detach] PROJECT_PATH [PROJECT_NAME]")
+	fmt.Println("  doombox start [--agent claude|codex|gemini] [--detach] PROJECT_PATH [PROJECT_NAME]")
+	fmt.Println("  doombox connect [--agent claude|codex|gemini] [--detach] PROJECT_PATH [PROJECT_NAME]")
 	fmt.Println("  doombox list [--all]")
 }
 
@@ -104,10 +106,12 @@ func (c *cli) runOpen(args []string) error {
 		return err
 	}
 	if running {
+		fmt.Printf("Container already running for project %s. Connecting...\n", projectName)
 		fmt.Printf("Connecting to %s for project: %s\n", *agent, projectName)
 		return c.run("docker", []string{"exec", "-it", containerName, "bash", "-lc", agentCmd}, nil)
 	}
 
+	fmt.Printf("No running container for project %s. Starting a new one...\n", projectName)
 	return c.startOrReuseSession(*agent, absPath, projectName, *interactive)
 }
 
