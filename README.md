@@ -15,6 +15,8 @@ doombox open --agent codex /path/to/project
 doombox list
 ```
 
+If you run `doombox open` without a path, it will use your current directory and ask for explicit confirmation before mounting it.
+
 This project expects global CLI install only (no `go run` workflow).
 
 ## Why this setup

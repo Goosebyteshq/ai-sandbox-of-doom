@@ -124,11 +124,11 @@ func TestEnvOr(t *testing.T) {
 }
 
 func TestResolveProjectPathAndNameRequiresPath(t *testing.T) {
-	_, _, err := resolveProjectPathAndName(nil)
+	_, _, err := resolveProjectPathAndName(nil, strings.NewReader("no\n"), &strings.Builder{})
 	if err == nil {
 		t.Fatal("expected error when project path is missing")
 	}
-	if !strings.Contains(err.Error(), "project path is required") {
+	if !strings.Contains(err.Error(), "aborted by user") {
 		t.Fatalf("unexpected error: %v", err)
 	}
 }
@@ -141,7 +141,7 @@ func TestResolveProjectPathAndName(t *testing.T) {
 	}
 
 	name := "Custom Name"
-	gotPath, gotName, err := resolveProjectPathAndName([]string{projectDir, name})
+	gotPath, gotName, err := resolveProjectPathAndName([]string{projectDir, name}, strings.NewReader(""), &strings.Builder{})
 	if err != nil {
 		t.Fatalf("resolveProjectPathAndName returned error: %v", err)
 	}
@@ -150,6 +150,30 @@ func TestResolveProjectPathAndName(t *testing.T) {
 	}
 	if gotName != "custom-name" {
 		t.Fatalf("got project name %q, want custom-name", gotName)
+	}
+}
+
+func TestConfirmCurrentDirectoryMount(t *testing.T) {
+	out := &strings.Builder{}
+	ok, err := confirmCurrentDirectoryMount("/tmp/project", strings.NewReader("yes\n"), out)
+	if err != nil {
+		t.Fatalf("unexpected error: %v", err)
+	}
+	if !ok {
+		t.Fatal("expected confirmation to succeed")
+	}
+	if !strings.Contains(out.String(), "/tmp/project") {
+		t.Fatalf("expected output to include path, got %q", out.String())
+	}
+}
+
+func TestConfirmCurrentDirectoryMountRejects(t *testing.T) {
+	ok, err := confirmCurrentDirectoryMount("/tmp/project", strings.NewReader("no\n"), &strings.Builder{})
+	if err != nil {
+		t.Fatalf("unexpected error: %v", err)
+	}
+	if ok {
+		t.Fatal("expected confirmation to be rejected")
 	}
 }
 

@@ -1,12 +1,14 @@
 package main
 
 import (
+	"bufio"
 	"crypto/sha1"
 	"embed"
 	"encoding/hex"
 	"errors"
 	"flag"
 	"fmt"
+	"io"
 	"io/fs"
 	"os"
 	"os/exec"
@@ -68,9 +70,9 @@ func printRootHelp() {
 	fmt.Println("AI Sandbox CLI")
 	fmt.Println("")
 	fmt.Println("Usage:")
-	fmt.Println("  doombox open [--agent claude|codex|gemini] [--detach] PROJECT_PATH [PROJECT_NAME]")
-	fmt.Println("  doombox start [--agent claude|codex|gemini] [--detach] PROJECT_PATH [PROJECT_NAME]")
-	fmt.Println("  doombox connect [--agent claude|codex|gemini] [--detach] PROJECT_PATH [PROJECT_NAME]")
+	fmt.Println("  doombox open [--agent claude|codex|gemini] [--detach] [PROJECT_PATH] [PROJECT_NAME]")
+	fmt.Println("  doombox start [--agent claude|codex|gemini] [--detach] [PROJECT_PATH] [PROJECT_NAME]")
+	fmt.Println("  doombox connect [--agent claude|codex|gemini] [--detach] [PROJECT_PATH] [PROJECT_NAME]")
 	fmt.Println("  doombox list [--all]")
 }
 
@@ -90,7 +92,7 @@ func (c *cli) runOpen(args []string) error {
 		*interactive = false
 	}
 
-	absPath, projectName, err := resolveProjectPathAndName(fs.Args())
+	absPath, projectName, err := resolveProjectPathAndName(fs.Args(), os.Stdin, os.Stdout)
 	if err != nil {
 		return err
 	}
@@ -202,11 +204,29 @@ func projectNameFromContainerName(containerName string) string {
 	return strings.TrimPrefix(containerName, "ai-dev-")
 }
 
-func resolveProjectPathAndName(pos []string) (string, string, error) {
-	if len(pos) < 1 || strings.TrimSpace(pos[0]) == "" {
-		return "", "", errors.New("project path is required; use: doombox open --agent <claude|codex|gemini> /path/to/project")
+func resolveProjectPathAndName(pos []string, in io.Reader, out io.Writer) (string, string, error) {
+	projectPath := ""
+	if len(pos) >= 1 {
+		projectPath = strings.TrimSpace(pos[0])
 	}
-	projectPath := pos[0]
+	if projectPath == "" {
+		cwd, err := os.Getwd()
+		if err != nil {
+			return "", "", err
+		}
+		absCwd, err := filepath.Abs(cwd)
+		if err != nil {
+			return "", "", err
+		}
+		ok, err := confirmCurrentDirectoryMount(absCwd, in, out)
+		if err != nil {
+			return "", "", err
+		}
+		if !ok {
+			return "", "", errors.New("aborted by user")
+		}
+		projectPath = absCwd
+	}
 	absPath, err := filepath.Abs(projectPath)
 	if err != nil {
 		return "", "", err
@@ -223,6 +243,30 @@ func resolveProjectPathAndName(pos []string) (string, string, error) {
 		projectName = defaultProjectName(absPath)
 	}
 	return absPath, sanitizeProjectName(projectName), nil
+}
+
+func confirmCurrentDirectoryMount(absPath string, in io.Reader, out io.Writer) (bool, error) {
+	fmt.Fprintln(out, "No project path provided.")
+	fmt.Fprintf(out, "You are about to mount your current directory in YOLO mode:\n  %s\n", absPath)
+	if home, err := os.UserHomeDir(); err == nil {
+		if samePath(absPath, home) {
+			fmt.Fprintln(out, "WARNING: This is your home directory.")
+		}
+	}
+	fmt.Fprint(out, "Type 'yes' to continue: ")
+
+	reader := bufio.NewReader(in)
+	line, err := reader.ReadString('\n')
+	if err != nil && !errors.Is(err, io.EOF) {
+		return false, err
+	}
+	return strings.EqualFold(strings.TrimSpace(line), "yes"), nil
+}
+
+func samePath(a, b string) bool {
+	ca := filepath.Clean(a)
+	cb := filepath.Clean(b)
+	return ca == cb
 }
 
 func (c *cli) startOrReuseSession(agent, absPath, projectName string, interactive bool) error {
