@@ -132,6 +132,12 @@ Pre-push gate evaluator is in `harness/engine/prepush_gate.go`:
 
 Current defaults are Codex-specific, but the config shape is provider-based so Gemini/Cloud can be added to the same harness flow later.
 
+Provider adapter registry is in `harness/adapters/provider.go`:
+
+- `codex`: primary adapter
+- `gemini`: stub adapter
+- `cloud` (claude alias): stub adapter
+
 ## Harness testing (no live LLM required)
 
 You can validate harness behavior without calling an LLM:

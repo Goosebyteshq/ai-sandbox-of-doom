@@ -18,6 +18,7 @@ import (
 	"strings"
 
 	"github.com/Goosebyteshq/doombox/harness"
+	harnessadapters "github.com/Goosebyteshq/doombox/harness/adapters"
 )
 
 type cli struct {
@@ -166,16 +167,11 @@ func commandForAgent(agent, override string) (string, error) {
 	if override != "" {
 		return override, nil
 	}
-	switch agent {
-	case "claude":
-		return "claude --dangerously-skip-permissions", nil
-	case "codex":
-		return "codex --sandbox danger-full-access --ask-for-approval never", nil
-	case "gemini":
-		return "gemini --yolo", nil
-	default:
+	adapter, err := harnessadapters.Lookup(agent)
+	if err != nil {
 		return "", fmt.Errorf("unsupported agent %q (expected claude, codex, gemini)", agent)
 	}
+	return adapter.DefaultCommand(), nil
 }
 
 type containerRow struct {

@@ -183,7 +183,7 @@
     {
       "id": "P5",
       "title": "tmux UX and provider adapters",
-      "status": "todo",
+      "status": "in_progress",
       "tasks": [
         {
           "id": "P5-T1",
@@ -195,23 +195,23 @@
         {
           "id": "P5-T2",
           "title": "Expose provider adapter interface for Codex, Gemini, Cloud",
-          "checkbox": "[ ]",
-          "done": false,
-          "status": "todo"
+          "checkbox": "[x]",
+          "done": true,
+          "status": "done"
         },
         {
           "id": "P5-T3",
           "title": "Implement Codex adapter first",
-          "checkbox": "[ ]",
-          "done": false,
-          "status": "todo"
+          "checkbox": "[x]",
+          "done": true,
+          "status": "done"
         },
         {
           "id": "P5-T4",
           "title": "Add stubs for Gemini and Cloud adapters",
-          "checkbox": "[ ]",
-          "done": false,
-          "status": "todo"
+          "checkbox": "[x]",
+          "done": true,
+          "status": "done"
         }
       ]
     },
