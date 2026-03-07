@@ -5,6 +5,8 @@ import (
 	"path/filepath"
 	"strings"
 	"testing"
+
+	harnessengine "github.com/Goosebyteshq/doombox/harness/engine"
 )
 
 func TestSanitizeProjectName(t *testing.T) {
@@ -390,6 +392,9 @@ func TestCollectHarnessReport(t *testing.T) {
 	if report.Rubric.EventCount != 1 {
 		t.Fatalf("expected rubric event count=1, got %d", report.Rubric.EventCount)
 	}
+	if report.Health.Pass {
+		t.Fatal("expected health to fail because open_todos is 1 with default thresholds")
+	}
 }
 
 func TestRunHarnessInit(t *testing.T) {
@@ -401,5 +406,28 @@ func TestRunHarnessInit(t *testing.T) {
 	}
 	if _, err := os.Stat(filepath.Join(projectDir, ".doombox", "harness.json")); err != nil {
 		t.Fatalf("expected harness.json: %v", err)
+	}
+}
+
+func TestEvaluateHarnessHealth(t *testing.T) {
+	report := harnessReport{
+		Status: harnessStatus{
+			OpenTodos:      1,
+			BlockRiskCount: 2,
+		},
+		Rubric: harnessengine.TrajectoryRubric{
+			Score: 0.60,
+		},
+	}
+	health := evaluateHarnessHealth(report, harnessHealthOptions{
+		MinScore:     0.70,
+		MaxOpenTodos: 0,
+		MaxBlockRisk: 0,
+	})
+	if health.Pass {
+		t.Fatal("expected health to fail")
+	}
+	if len(health.Reasons) != 3 {
+		t.Fatalf("expected 3 health reasons, got %d", len(health.Reasons))
 	}
 }

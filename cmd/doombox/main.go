@@ -84,7 +84,7 @@ func printRootHelp() {
 	fmt.Println("  doombox harness init [--agent codex|gemini|cloud] [PROJECT_PATH]")
 	fmt.Println("  doombox harness status [PROJECT_PATH]")
 	fmt.Println("  doombox harness score [PROJECT_PATH]")
-	fmt.Println("  doombox harness report [--json] [PROJECT_PATH]")
+	fmt.Println("  doombox harness report [--json] [--strict] [--min-score 0.70] [PROJECT_PATH]")
 	fmt.Println("  doombox harness flip --baseline BASELINE.json --candidate CANDIDATE.json [--json]")
 }
 
@@ -203,7 +203,7 @@ func printHarnessHelp() {
 	fmt.Println("  doombox harness init [--agent codex|gemini|cloud] [PROJECT_PATH]")
 	fmt.Println("  doombox harness status [--json] [PROJECT_PATH]")
 	fmt.Println("  doombox harness score [--json] [PROJECT_PATH]")
-	fmt.Println("  doombox harness report [--json] [PROJECT_PATH]")
+	fmt.Println("  doombox harness report [--json] [--strict] [--min-score 0.70] [PROJECT_PATH]")
 	fmt.Println("  doombox harness flip --baseline BASELINE.json --candidate CANDIDATE.json [--json]")
 }
 
@@ -391,6 +391,10 @@ func (c *cli) runHarnessReport(args []string) error {
 	fs := flag.NewFlagSet("harness report", flag.ContinueOnError)
 	fs.SetOutput(os.Stdout)
 	jsonOut := fs.Bool("json", false, "print JSON output")
+	strict := fs.Bool("strict", false, "exit non-zero if health checks fail")
+	minScore := fs.Float64("min-score", 0.70, "minimum rubric score required")
+	maxOpenTodos := fs.Int("max-open-todos", 0, "maximum allowed open todos")
+	maxBlockRisks := fs.Int("max-block-risks", 0, "maximum allowed block risk events")
 	if err := fs.Parse(args); err != nil {
 		return err
 	}
@@ -416,6 +420,11 @@ func (c *cli) runHarnessReport(args []string) error {
 	if err != nil {
 		return err
 	}
+	report.Health = evaluateHarnessHealth(report, harnessHealthOptions{
+		MinScore:     *minScore,
+		MaxOpenTodos: *maxOpenTodos,
+		MaxBlockRisk: *maxBlockRisks,
+	})
 
 	if *jsonOut {
 		b, err := json.MarshalIndent(report, "", "  ")
@@ -437,6 +446,16 @@ func (c *cli) runHarnessReport(args []string) error {
 	fmt.Printf("Open TODOs: %d\n", report.Status.OpenTodos)
 	fmt.Printf("Rubric score: %.2f\n", report.Rubric.Score)
 	fmt.Printf("Safety score: %.2f\n", report.Rubric.Safety)
+	fmt.Printf("Health pass: %v\n", report.Health.Pass)
+	if len(report.Health.Reasons) > 0 {
+		fmt.Println("Health reasons:")
+		for _, reason := range report.Health.Reasons {
+			fmt.Printf("- %s\n", reason)
+		}
+	}
+	if *strict && !report.Health.Pass {
+		return errors.New("harness report strict checks failed")
+	}
 	return nil
 }
 
@@ -457,6 +476,18 @@ type harnessReport struct {
 	TodoPath        string                         `json:"todo_path"`
 	Status          harnessStatus                  `json:"status"`
 	Rubric          harnessengine.TrajectoryRubric `json:"rubric"`
+	Health          harnessHealth                  `json:"health"`
+}
+
+type harnessHealth struct {
+	Pass    bool     `json:"pass"`
+	Reasons []string `json:"reasons"`
+}
+
+type harnessHealthOptions struct {
+	MinScore     float64
+	MaxOpenTodos int
+	MaxBlockRisk int
 }
 
 func collectHarnessStatus(projectPath string) (harnessStatus, error) {
@@ -548,7 +579,37 @@ func collectHarnessReport(projectPath string) (harnessReport, error) {
 		TodoPath:        todoPath,
 		Status:          status,
 		Rubric:          rubric,
+		Health: evaluateHarnessHealth(harnessReport{
+			ProjectPath:     projectPath,
+			DoomboxPath:     doomboxDir,
+			EventsPath:      eventsPath,
+			CheckpointsPath: checkpointsPath,
+			TodoPath:        todoPath,
+			Status:          status,
+			Rubric:          rubric,
+		}, harnessHealthOptions{
+			MinScore:     0.70,
+			MaxOpenTodos: 0,
+			MaxBlockRisk: 0,
+		}),
 	}, nil
+}
+
+func evaluateHarnessHealth(report harnessReport, opts harnessHealthOptions) harnessHealth {
+	reasons := []string{}
+	if report.Rubric.Score < opts.MinScore {
+		reasons = append(reasons, fmt.Sprintf("rubric score %.2f below minimum %.2f", report.Rubric.Score, opts.MinScore))
+	}
+	if report.Status.OpenTodos > opts.MaxOpenTodos {
+		reasons = append(reasons, fmt.Sprintf("open todos %d exceed max %d", report.Status.OpenTodos, opts.MaxOpenTodos))
+	}
+	if report.Status.BlockRiskCount > opts.MaxBlockRisk {
+		reasons = append(reasons, fmt.Sprintf("block risk events %d exceed max %d", report.Status.BlockRiskCount, opts.MaxBlockRisk))
+	}
+	return harnessHealth{
+		Pass:    len(reasons) == 0,
+		Reasons: reasons,
+	}
 }
 
 func collectFlipReport(baselinePath, candidatePath string) (harnessengine.FlipReport, error) {
