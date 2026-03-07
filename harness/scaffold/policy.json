@@ -16,6 +16,26 @@
     "docker-compose.yml",
     "Dockerfile"
   ],
+  "sensitive_paths": [
+    "/etc/",
+    "/root/",
+    ".ssh/",
+    ".aws/",
+    ".gnupg/"
+  ],
+  "blocked_command_prefixes": [
+    "rm -rf /",
+    "mkfs",
+    "dd if=",
+    "shutdown",
+    "reboot"
+  ],
+  "justify_command_prefixes": [
+    "git push --force",
+    "git reset --hard",
+    "docker system prune",
+    "docker volume rm"
+  ],
   "generated_file_patterns": [
     "dist/",
     "vendor/",

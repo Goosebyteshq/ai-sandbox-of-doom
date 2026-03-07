@@ -121,6 +121,42 @@ func TestBusTypedEmitters(t *testing.T) {
 	}
 }
 
+func TestBusEmitClassifiedToolInvocation(t *testing.T) {
+	dir := t.TempDir()
+	eventsPath := filepath.Join(dir, "events.jsonl")
+	policyPath := PolicyPathFromEventsPath(eventsPath)
+	err := os.WriteFile(policyPath, []byte(`{
+  "blocked_command_prefixes": ["my-blocked-command"]
+}`), 0644)
+	if err != nil {
+		t.Fatalf("write policy file: %v", err)
+	}
+
+	bus := NewBusAtPath(eventsPath)
+
+	err = bus.EmitClassifiedToolInvocation("codex", ToolInvocation{
+		Command: "my-blocked-command now",
+		Args:    []string{"my-blocked-command", "now"},
+		Cwd:     "/workspace/project",
+		Files:   []string{"README.md"},
+	}, "blocked command", nil)
+	if err != nil {
+		t.Fatalf("EmitClassifiedToolInvocation: %v", err)
+	}
+
+	events := readEvents(t, eventsPath)
+	if len(events) != 1 {
+		t.Fatalf("expected 1 event, got %d", len(events))
+	}
+	if events[0].RiskClassification != "block" {
+		t.Fatalf("expected block risk, got %q", events[0].RiskClassification)
+	}
+	rule, _ := events[0].Payload["tool_classification_rule"].(string)
+	if rule == "" {
+		t.Fatal("expected tool_classification_rule payload to be set")
+	}
+}
+
 func readEvents(t *testing.T, path string) []Event {
 	t.Helper()
 	b, err := os.ReadFile(path)

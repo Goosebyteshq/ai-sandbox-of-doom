@@ -24,6 +24,20 @@ type config struct {
 	AdversarialIntervalMinute int    `json:"adversarial_interval_minutes"`
 }
 
+type policyFile struct {
+	Version                 int      `json:"version"`
+	Provider                string   `json:"provider"`
+	CheckpointEveryActions  int      `json:"checkpoint_every_actions"`
+	AdversarialIntervalMins int      `json:"adversarial_interval_minutes"`
+	FastTests               []string `json:"fast_tests"`
+	IntegrationTests        []string `json:"integration_tests"`
+	RiskyPaths              []string `json:"risky_paths"`
+	SensitivePaths          []string `json:"sensitive_paths"`
+	BlockedCommandPrefixes  []string `json:"blocked_command_prefixes"`
+	JustifyCommandPrefixes  []string `json:"justify_command_prefixes"`
+	GeneratedFilePatterns   []string `json:"generated_file_patterns"`
+}
+
 type todoFile struct {
 	Version int        `json:"version"`
 	Items   []todoItem `json:"items"`
@@ -193,6 +207,15 @@ func ensureHarnessFiles(projectPath, agent string, now time.Time) (config, error
 		}
 	}
 
+	policyPath := filepath.Join(dir, "policy.json")
+	if _, err := os.Stat(policyPath); errors.Is(err, os.ErrNotExist) {
+		if err := writeJSONFile(policyPath, defaultPolicy(agent, cfg.AdversarialIntervalMinute)); err != nil {
+			return config{}, err
+		}
+	} else if err != nil {
+		return config{}, err
+	}
+
 	todoPath := filepath.Join(dir, "todo.json")
 	if _, err := os.Stat(todoPath); errors.Is(err, os.ErrNotExist) {
 		if err := writeJSONFile(todoPath, todoFile{Version: 1, Items: []todoItem{}}); err != nil {
@@ -237,6 +260,22 @@ func ensureHarnessFiles(projectPath, agent string, now time.Time) (config, error
 	})
 
 	return cfg, nil
+}
+
+func defaultPolicy(agent string, adversarialIntervalMins int) policyFile {
+	return policyFile{
+		Version:                 1,
+		Provider:                agent,
+		CheckpointEveryActions:  4,
+		AdversarialIntervalMins: adversarialIntervalMins,
+		FastTests:               []string{"go test ./..."},
+		IntegrationTests:        []string{"make test-integration"},
+		RiskyPaths:              []string{".github/", "infra/", "deploy/", "docker-compose.yml", "Dockerfile"},
+		SensitivePaths:          []string{"/etc/", "/root/", ".ssh/", ".aws/", ".gnupg/"},
+		BlockedCommandPrefixes:  []string{"rm -rf /", "mkfs", "dd if=", "shutdown", "reboot"},
+		JustifyCommandPrefixes:  []string{"git push --force", "git reset --hard", "docker system prune", "docker volume rm"},
+		GeneratedFilePatterns:   []string{"dist/", "vendor/", "*.generated.*"},
+	}
 }
 
 func ensureAdversarialTodo(projectPath, agent string, cfg config, now time.Time, reason string, bus *engine.Bus) error {

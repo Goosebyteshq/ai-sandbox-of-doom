@@ -24,6 +24,7 @@ func TestEnsureHarnessFilesCreatesDefaults(t *testing.T) {
 
 	for _, p := range []string{
 		filepath.Join(projectDir, ".doombox", "harness.json"),
+		filepath.Join(projectDir, ".doombox", "policy.json"),
 		filepath.Join(projectDir, ".doombox", "todo.json"),
 		filepath.Join(projectDir, ".doombox", "session-log.jsonl"),
 		filepath.Join(projectDir, ".doombox", "events.jsonl"),
@@ -32,6 +33,19 @@ func TestEnsureHarnessFilesCreatesDefaults(t *testing.T) {
 		if _, err := os.Stat(p); err != nil {
 			t.Fatalf("expected file %s: %v", p, err)
 		}
+	}
+
+	policyPath := filepath.Join(projectDir, ".doombox", "policy.json")
+	var policy policyFile
+	b, err := os.ReadFile(policyPath)
+	if err != nil {
+		t.Fatalf("read policy: %v", err)
+	}
+	if err := json.Unmarshal(b, &policy); err != nil {
+		t.Fatalf("unmarshal policy: %v", err)
+	}
+	if policy.CheckpointEveryActions != 4 {
+		t.Fatalf("expected checkpoint_every_actions=4, got %d", policy.CheckpointEveryActions)
 	}
 }
 

@@ -76,6 +76,7 @@ When you run `doombox open --agent codex ...`, doombox initializes:
 - `.doombox/harness.json` (provider + interval config)
 - `.doombox/todo.json` (structured task list)
 - `.doombox/session-log.jsonl` (append-only event log)
+- `.doombox/policy.json` (checkpoint/test/gate + tool-risk policy)
 - `.doombox/events.jsonl` (typed event bus for supervisor/gates)
 - `.doombox/checkpoints/*.json` (structured checkpoint snapshots)
 - `.doombox/permission-denials.jsonl` (permission-related blocks/approval events)
@@ -95,6 +96,13 @@ Typed bus writer support is now in `harness/engine/bus.go` with helpers for:
 - test results (`test_result`)
 - gate decisions (`gate_decision`)
 
+Tool invocation classification support is in `harness/engine/tool_classification.go`:
+
+- `safe`
+- `justify`
+- `block`
+- rule sources: `sensitive_paths`, `risky_paths`, `blocked_command_prefixes`, `justify_command_prefixes` in `.doombox/policy.json`
+
 Action-based checkpoint triggering is implemented in `harness/engine/checkpoint_trigger.go`:
 
 - emits `checkpoint_due` every configurable N action clusters (default 4)
@@ -105,6 +113,22 @@ Immediate checkpoint triggering is implemented in `harness/engine/immediate_trig
 - risky path touches
 - large diffs
 - pre-commit/pre-push signals
+
+Pre-commit gate evaluator is in `harness/engine/precommit_gate.go`:
+
+- blocks generated files
+- blocks out-of-scope files
+- requires non-obvious file justifications when enabled
+- blocks commit when fast tests are stale/failing after meaningful edits
+
+Test discipline helpers are in `harness/engine/test_discipline.go`:
+
+- run fast test commands after meaningful edits
+- run integration test commands on policy-triggered checkpoints
+
+Pre-push gate evaluator is in `harness/engine/prepush_gate.go`:
+
+- blocks push when integration tests are stale/failing under pre-push policy
 
 Current defaults are Codex-specific, but the config shape is provider-based so Gemini/Cloud can be added to the same harness flow later.
 

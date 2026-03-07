@@ -113,7 +113,7 @@
     {
       "id": "P3",
       "title": "Safety and permission observability",
-      "status": "in_progress",
+      "status": "done",
       "tasks": [
         {
           "id": "P3-T1",
@@ -125,58 +125,58 @@
         {
           "id": "P3-T2",
           "title": "Add tool invocation classification fields (safe, justify, block)",
-          "checkbox": "[ ]",
-          "done": false,
-          "status": "todo"
+          "checkbox": "[x]",
+          "done": true,
+          "status": "done"
         },
         {
           "id": "P3-T3",
           "title": "Add policy rules for sensitive paths and risky command patterns",
-          "checkbox": "[ ]",
-          "done": false,
-          "status": "todo"
+          "checkbox": "[x]",
+          "done": true,
+          "status": "done"
         }
       ]
     },
     {
       "id": "P4",
       "title": "Hard gates and test discipline",
-      "status": "todo",
+      "status": "done",
       "tasks": [
         {
           "id": "P4-T1",
           "title": "Implement harness-managed pre-commit gate",
-          "checkbox": "[ ]",
-          "done": false,
-          "status": "todo"
+          "checkbox": "[x]",
+          "done": true,
+          "status": "done"
         },
         {
           "id": "P4-T2",
           "title": "Implement generated-file detection and unrelated-file detection",
-          "checkbox": "[ ]",
-          "done": false,
-          "status": "todo"
+          "checkbox": "[x]",
+          "done": true,
+          "status": "done"
         },
         {
           "id": "P4-T3",
           "title": "Require non-obvious file justifications at commit gate",
-          "checkbox": "[ ]",
-          "done": false,
-          "status": "todo"
+          "checkbox": "[x]",
+          "done": true,
+          "status": "done"
         },
         {
           "id": "P4-T4",
           "title": "Run fast tests after meaningful edits and block commit when stale",
-          "checkbox": "[ ]",
-          "done": false,
-          "status": "todo"
+          "checkbox": "[x]",
+          "done": true,
+          "status": "done"
         },
         {
           "id": "P4-T5",
           "title": "Implement pre-push integration-test policy",
-          "checkbox": "[ ]",
-          "done": false,
-          "status": "todo"
+          "checkbox": "[x]",
+          "done": true,
+          "status": "done"
         }
       ]
     },

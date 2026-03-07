@@ -109,6 +109,29 @@ func (b *Bus) EmitToolInvocation(agent, command, message, risk string, payload m
 	})
 }
 
+func (b *Bus) EmitClassifiedToolInvocation(agent string, invocation ToolInvocation, message string, payload map[string]any) error {
+	classification := ToolClassifierFromPolicyFile(PolicyPathFromEventsPath(b.eventsPath)).Classify(invocation)
+	withMeta := clonePayload(payload)
+	if withMeta == nil {
+		withMeta = map[string]any{}
+	}
+	withMeta["tool_classification_reason"] = classification.Reason
+	withMeta["tool_classification_rule"] = classification.Rule
+	if invocation.Command != "" {
+		withMeta["command"] = invocation.Command
+	}
+	if len(invocation.Args) > 0 {
+		withMeta["args"] = invocation.Args
+	}
+	if invocation.Cwd != "" {
+		withMeta["cwd"] = invocation.Cwd
+	}
+	if len(invocation.Files) > 0 {
+		withMeta["files"] = invocation.Files
+	}
+	return b.EmitToolInvocation(agent, invocation.Command, message, classification.Risk, withMeta)
+}
+
 func (b *Bus) EmitEditCluster(agent, message, risk string, files []string, payload map[string]any) error {
 	withFiles := clonePayload(payload)
 	if len(files) > 0 {
