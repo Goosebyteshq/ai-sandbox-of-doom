@@ -187,9 +187,17 @@ func (c *cli) runHarness(args []string) error {
 }
 
 func (c *cli) runHarnessStatus(args []string) error {
+	fs := flag.NewFlagSet("harness status", flag.ContinueOnError)
+	fs.SetOutput(os.Stdout)
+	jsonOut := fs.Bool("json", false, "print JSON output")
+	if err := fs.Parse(args); err != nil {
+		return err
+	}
+
 	projectPath := ""
-	if len(args) > 0 {
-		projectPath = strings.TrimSpace(args[0])
+	remaining := fs.Args()
+	if len(remaining) > 0 {
+		projectPath = strings.TrimSpace(remaining[0])
 	}
 	if projectPath == "" {
 		cwd, err := os.Getwd()
@@ -207,6 +215,14 @@ func (c *cli) runHarnessStatus(args []string) error {
 	if err != nil {
 		return err
 	}
+	if *jsonOut {
+		b, err := json.MarshalIndent(status, "", "  ")
+		if err != nil {
+			return err
+		}
+		fmt.Println(string(b))
+		return nil
+	}
 
 	fmt.Println("Doombox Harness Status")
 	fmt.Println("======================")
@@ -221,9 +237,17 @@ func (c *cli) runHarnessStatus(args []string) error {
 }
 
 func (c *cli) runHarnessScore(args []string) error {
+	fs := flag.NewFlagSet("harness score", flag.ContinueOnError)
+	fs.SetOutput(os.Stdout)
+	jsonOut := fs.Bool("json", false, "print JSON output")
+	if err := fs.Parse(args); err != nil {
+		return err
+	}
+
 	projectPath := ""
-	if len(args) > 0 {
-		projectPath = strings.TrimSpace(args[0])
+	remaining := fs.Args()
+	if len(remaining) > 0 {
+		projectPath = strings.TrimSpace(remaining[0])
 	}
 	if projectPath == "" {
 		cwd, err := os.Getwd()
@@ -240,6 +264,14 @@ func (c *cli) runHarnessScore(args []string) error {
 	score, err := collectHarnessRubric(absPath)
 	if err != nil {
 		return err
+	}
+	if *jsonOut {
+		b, err := json.MarshalIndent(score, "", "  ")
+		if err != nil {
+			return err
+		}
+		fmt.Println(string(b))
+		return nil
 	}
 
 	fmt.Println("Doombox Harness Rubric")
@@ -303,12 +335,12 @@ func (c *cli) runHarnessFlip(args []string) error {
 }
 
 type harnessStatus struct {
-	EventCount       int
-	CheckpointCount  int
-	OpenTodos        int
-	BlockRiskCount   int
-	JustifyRiskCount int
-	LastEventType    string
+	EventCount       int    `json:"event_count"`
+	CheckpointCount  int    `json:"checkpoint_count"`
+	OpenTodos        int    `json:"open_todos"`
+	BlockRiskCount   int    `json:"block_risk_count"`
+	JustifyRiskCount int    `json:"justify_risk_count"`
+	LastEventType    string `json:"last_event_type"`
 }
 
 func collectHarnessStatus(projectPath string) (harnessStatus, error) {

@@ -14,7 +14,9 @@ Then use:
 doombox open --agent codex /path/to/project
 doombox list
 doombox harness status /path/to/project
+doombox harness status --json /path/to/project
 doombox harness score /path/to/project
+doombox harness score --json /path/to/project
 doombox harness flip --baseline baseline.json --candidate candidate.json
 ```
 
