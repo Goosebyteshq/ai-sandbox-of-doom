@@ -81,6 +81,7 @@ func printRootHelp() {
 	fmt.Println("  doombox start [--agent claude|codex|gemini] [--detach] [PROJECT_PATH] [PROJECT_NAME]")
 	fmt.Println("  doombox connect [--agent claude|codex|gemini] [--detach] [PROJECT_PATH] [PROJECT_NAME]")
 	fmt.Println("  doombox list [--all]")
+	fmt.Println("  doombox harness init [--agent codex|gemini|cloud] [PROJECT_PATH]")
 	fmt.Println("  doombox harness status [PROJECT_PATH]")
 	fmt.Println("  doombox harness score [PROJECT_PATH]")
 	fmt.Println("  doombox harness report [--json] [PROJECT_PATH]")
@@ -176,6 +177,8 @@ func (c *cli) runHarness(args []string) error {
 		return c.runHarnessStatus(nil)
 	}
 	switch strings.ToLower(strings.TrimSpace(args[0])) {
+	case "init":
+		return c.runHarnessInit(args[1:])
 	case "status":
 		return c.runHarnessStatus(args[1:])
 	case "score":
@@ -187,6 +190,38 @@ func (c *cli) runHarness(args []string) error {
 	default:
 		return fmt.Errorf("unknown harness command %q", args[0])
 	}
+}
+
+func (c *cli) runHarnessInit(args []string) error {
+	fs := flag.NewFlagSet("harness init", flag.ContinueOnError)
+	fs.SetOutput(os.Stdout)
+	agent := fs.String("agent", envOr("AGENT", "codex"), "agent: codex|gemini|cloud")
+	if err := fs.Parse(args); err != nil {
+		return err
+	}
+
+	projectPath := ""
+	remaining := fs.Args()
+	if len(remaining) > 0 {
+		projectPath = strings.TrimSpace(remaining[0])
+	}
+	if projectPath == "" {
+		cwd, err := os.Getwd()
+		if err != nil {
+			return err
+		}
+		projectPath = cwd
+	}
+
+	absPath, err := filepath.Abs(projectPath)
+	if err != nil {
+		return err
+	}
+	if err := harness.Initialize(*agent, absPath); err != nil {
+		return err
+	}
+	fmt.Printf("Harness initialized at %s/.doombox (agent=%s)\n", absPath, *agent)
+	return nil
 }
 
 func (c *cli) runHarnessStatus(args []string) error {

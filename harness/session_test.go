@@ -156,3 +156,24 @@ func TestRunWithSessionWritesSessionEventsToBus(t *testing.T) {
 		t.Fatalf("expected last event session_end, got %q", last.EventType)
 	}
 }
+
+func TestInitializeCreatesHarnessFiles(t *testing.T) {
+	projectDir := t.TempDir()
+	if err := Initialize("codex", projectDir); err != nil {
+		t.Fatalf("Initialize failed: %v", err)
+	}
+
+	required := []string{
+		filepath.Join(projectDir, ".doombox", "harness.json"),
+		filepath.Join(projectDir, ".doombox", "policy.json"),
+		filepath.Join(projectDir, ".doombox", "todo.json"),
+		filepath.Join(projectDir, ".doombox", "session-log.jsonl"),
+		filepath.Join(projectDir, ".doombox", "events.jsonl"),
+		filepath.Join(projectDir, ".doombox", "permission-denials.jsonl"),
+	}
+	for _, path := range required {
+		if _, err := os.Stat(path); err != nil {
+			t.Fatalf("expected file %s: %v", path, err)
+		}
+	}
+}

@@ -80,6 +80,16 @@ func RunWithSession(agent, projectPath string, out io.Writer, runFn func() error
 	return runErr
 }
 
+// Initialize creates/updates harness runtime files under .doombox without
+// starting an interactive agent session.
+func Initialize(agent, projectPath string) error {
+	if strings.TrimSpace(agent) == "" {
+		agent = "codex"
+	}
+	_, err := ensureHarnessFiles(projectPath, agent, time.Now().UTC())
+	return err
+}
+
 // WriteScaffold writes harness runtime assets into a destination directory.
 func WriteScaffold(dstRoot string) error {
 	if err := os.MkdirAll(dstRoot, 0755); err != nil {

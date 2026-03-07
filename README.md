@@ -13,6 +13,7 @@ Then use:
 ```bash
 doombox open --agent codex /path/to/project
 doombox list
+doombox harness init /path/to/project
 doombox harness status /path/to/project
 doombox harness status --json /path/to/project
 doombox harness score /path/to/project

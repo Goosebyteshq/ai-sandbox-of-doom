@@ -391,3 +391,15 @@ func TestCollectHarnessReport(t *testing.T) {
 		t.Fatalf("expected rubric event count=1, got %d", report.Rubric.EventCount)
 	}
 }
+
+func TestRunHarnessInit(t *testing.T) {
+	projectDir := t.TempDir()
+	c := &cli{}
+	err := c.runHarnessInit([]string{"--agent", "codex", projectDir})
+	if err != nil {
+		t.Fatalf("runHarnessInit failed: %v", err)
+	}
+	if _, err := os.Stat(filepath.Join(projectDir, ".doombox", "harness.json")); err != nil {
+		t.Fatalf("expected harness.json: %v", err)
+	}
+}
