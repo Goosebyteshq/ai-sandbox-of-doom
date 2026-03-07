@@ -205,7 +205,7 @@ Interactive `doombox open` launches a tmux session inside the container:
 
 Tmux quick help shown on attach:
 
-- `F10`: detach immediately (no prefix)
+- `Ctrl-g`: detach immediately (no prefix)
 - `Ctrl-b n/p`: next/previous window
 - `Ctrl-b 1..4`: jump to a window
 - `Ctrl-b d`: detach from tmux
