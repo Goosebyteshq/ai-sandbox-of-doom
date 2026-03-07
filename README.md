@@ -93,7 +93,7 @@ Rules:
 - GitHub CLI (`gh`)
 - Fast search/navigation: `ripgrep`, `fd`, `bat`, `fzf`
 - Data helpers: `jq`, `yq`
-- Shell/productivity: `tmux`, `tree`, `entr`, `direnv`, `shellcheck`
+- Shell/productivity: `zsh`, `tmux` (with `oh-my-tmux`), `tree`, `entr`, `direnv`, `shellcheck`
 - Go 1.23.5
 - Node.js + pnpm
 - Python3 + uv
@@ -223,7 +223,7 @@ Interactive `doombox open` launches a tmux session inside the container:
 - window 1 `agent`: selected agent CLI
 - window 2 `supervisor`: harness HUD (events/checkpoints/todos/risk)
 - window 3 `events`: live `.doombox/events.jsonl` tail
-- window 4 `shell`: interactive terminal inside the container
+- window 4 `shell`: interactive terminal inside the container (zsh when available)
 - optional `--layout compact`: all four surfaces in one pane layout
 
 Tmux quick help shown on attach:

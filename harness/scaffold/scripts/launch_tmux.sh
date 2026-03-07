@@ -6,6 +6,15 @@ session_name="${DOOMBOX_TMUX_SESSION:-doombox}"
 supervisor_cmd="${DOOMBOX_SUPERVISOR_CMD:-/opt/doombox/harness/scripts/supervisor.sh}"
 events_cmd="${DOOMBOX_EVENTS_CMD:-mkdir -p .doombox && touch .doombox/events.jsonl && tail -f .doombox/events.jsonl}"
 layout="${DOOMBOX_LAYOUT:-windows}"
+shell_cmd="${DOOMBOX_SHELL_CMD:-}"
+
+if [[ -z "${shell_cmd}" ]]; then
+  if command -v zsh >/dev/null 2>&1; then
+    shell_cmd="zsh -l"
+  else
+    shell_cmd="bash -l"
+  fi
+fi
 
 if [[ -z "${agent_cmd}" ]]; then
   echo "missing DOOMBOX_AGENT_CMD for tmux launch"
@@ -27,14 +36,14 @@ case "${layout}" in
     tmux new-session -d -s "${session_name}" -n agent "bash -lc '${agent_cmd}'"
     tmux new-window -t "${session_name}" -n supervisor "bash -lc '${supervisor_cmd}'"
     tmux new-window -t "${session_name}" -n events "bash -lc '${events_cmd}'"
-    tmux new-window -t "${session_name}" -n shell "bash -l"
+    tmux new-window -t "${session_name}" -n shell "bash -lc '${shell_cmd}'"
     tmux select-window -t "${session_name}:agent"
     ;;
   compact)
     tmux new-session -d -s "${session_name}" -n compact "bash -lc '${agent_cmd}'"
     tmux split-window -h -t "${session_name}:compact" "bash -lc '${supervisor_cmd}'"
     tmux split-window -v -t "${session_name}:compact.1" "bash -lc '${events_cmd}'"
-    tmux split-window -v -t "${session_name}:compact.0" "bash -l"
+    tmux split-window -v -t "${session_name}:compact.0" "bash -lc '${shell_cmd}'"
     tmux select-layout -t "${session_name}:compact" tiled
     tmux select-pane -t "${session_name}:compact.0"
     ;;

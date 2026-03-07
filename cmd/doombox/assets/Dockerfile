@@ -22,6 +22,7 @@ RUN apt-get update && apt-get install -y \
     bat \
     fzf \
     tmux \
+    zsh \
     tree \
     entr \
     direnv \
@@ -74,7 +75,7 @@ RUN npx -y playwright@latest install --with-deps chromium \
     && chmod -R a+rX /ms-playwright
 
 # Create a user for development
-RUN useradd -m -s /bin/bash developer && \
+RUN useradd -m -s /bin/zsh developer && \
     echo 'developer ALL=(ALL) NOPASSWD:ALL' >> /etc/sudoers
 
 # Set working directory
@@ -93,12 +94,22 @@ RUN curl -fsSL https://claude.ai/install.sh | HOME=/home/developer bash
 # Install uv for Python package management as developer user
 RUN curl -LsSf https://astral.sh/uv/install.sh | HOME=/home/developer sh
 
+# Install oh-my-tmux for tmux UX defaults
+RUN git clone --depth 1 https://github.com/gpakosz/.tmux.git /home/developer/.tmux \
+    && ln -sf /home/developer/.tmux/.tmux.conf /home/developer/.tmux.conf \
+    && cp /home/developer/.tmux/.tmux.conf.local /home/developer/.tmux.conf.local
+
 # Set up environment variables for PATH
 RUN echo 'export PATH="/home/developer/.local/bin:/usr/local/go/bin:$PATH"' >> /home/developer/.bashrc && \
     echo 'export GOPATH=/home/developer/go' >> /home/developer/.bashrc && \
     echo 'export PATH="$GOPATH/bin:$PATH"' >> /home/developer/.bashrc && \
     echo 'alias bat=batcat' >> /home/developer/.bashrc && \
-    echo 'alias fd=fdfind' >> /home/developer/.bashrc
+    echo 'alias fd=fdfind' >> /home/developer/.bashrc && \
+    echo 'export PATH="/home/developer/.local/bin:/usr/local/go/bin:$PATH"' >> /home/developer/.zshrc && \
+    echo 'export GOPATH=/home/developer/go' >> /home/developer/.zshrc && \
+    echo 'export PATH="$GOPATH/bin:$PATH"' >> /home/developer/.zshrc && \
+    echo 'alias bat=batcat' >> /home/developer/.zshrc && \
+    echo 'alias fd=fdfind' >> /home/developer/.zshrc
 
 # Ensure the PATH is set for interactive shells
 RUN echo 'if [ -f ~/.bashrc ]; then source ~/.bashrc; fi' >> /home/developer/.bash_profile
