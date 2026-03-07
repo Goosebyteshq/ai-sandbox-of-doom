@@ -204,6 +204,18 @@ func TestPrintRootHelpOpenOnly(t *testing.T) {
 	if !strings.Contains(out, "doombox open") {
 		t.Fatalf("expected root help to include open command, got: %q", out)
 	}
+	if !strings.Contains(out, "doombox rm") {
+		t.Fatalf("expected root help to include rm command, got: %q", out)
+	}
+	if !strings.Contains(out, "doombox list|ls") {
+		t.Fatalf("expected root help to include list|ls command, got: %q", out)
+	}
+	if !strings.Contains(out, "doombox open [-n]") {
+		t.Fatalf("expected root help to include open non-interactive flag, got: %q", out)
+	}
+	if !strings.Contains(out, "doombox rm [-n]") {
+		t.Fatalf("expected root help to include rm non-interactive flag, got: %q", out)
+	}
 	if !strings.Contains(out, "--layout windows|compact") {
 		t.Fatalf("expected root help to include layout flag, got: %q", out)
 	}
@@ -244,6 +256,72 @@ func TestNormalizeTmuxLayout(t *testing.T) {
 				t.Fatalf("normalizeTmuxLayout(%q) = %q, want %q", tt.in, got, tt.want)
 			}
 		})
+	}
+}
+
+func TestDoomboxContainerNameFromTarget(t *testing.T) {
+	tmp := t.TempDir()
+	absTmp, err := filepath.Abs(tmp)
+	if err != nil {
+		t.Fatalf("abs temp dir: %v", err)
+	}
+	tests := []struct {
+		in   string
+		want string
+	}{
+		{in: "ai-dev-custom", want: "ai-dev-custom"},
+		{in: "My Project", want: "ai-dev-my-project"},
+		{in: tmp, want: "ai-dev-" + defaultProjectName(absTmp)},
+	}
+
+	for _, tt := range tests {
+		t.Run(tt.in, func(t *testing.T) {
+			got, err := doomboxContainerNameFromTarget(tt.in)
+			if err != nil {
+				t.Fatalf("unexpected error: %v", err)
+			}
+			if got != tt.want {
+				t.Fatalf("doomboxContainerNameFromTarget(%q) = %q, want %q", tt.in, got, tt.want)
+			}
+		})
+	}
+}
+
+func TestDoomboxContainerNameFromTargetEmpty(t *testing.T) {
+	if _, err := doomboxContainerNameFromTarget("   "); err == nil {
+		t.Fatal("expected error for empty target")
+	}
+}
+
+func TestParseSelectionIndicesSingle(t *testing.T) {
+	indices, err := parseSelectionIndices("2", 3, false)
+	if err != nil {
+		t.Fatalf("unexpected error: %v", err)
+	}
+	if len(indices) != 1 || indices[0] != 1 {
+		t.Fatalf("unexpected indices: %#v", indices)
+	}
+}
+
+func TestParseSelectionIndicesMulti(t *testing.T) {
+	indices, err := parseSelectionIndices("1, 3, 3", 3, true)
+	if err != nil {
+		t.Fatalf("unexpected error: %v", err)
+	}
+	if len(indices) != 2 {
+		t.Fatalf("unexpected indices length: %#v", indices)
+	}
+	if indices[0] != 0 || indices[1] != 2 {
+		t.Fatalf("unexpected indices: %#v", indices)
+	}
+}
+
+func TestParseSelectionIndicesInvalid(t *testing.T) {
+	if _, err := parseSelectionIndices("x", 2, false); err == nil {
+		t.Fatal("expected parse error")
+	}
+	if _, err := parseSelectionIndices("4", 2, false); err == nil {
+		t.Fatal("expected range error")
 	}
 }
 

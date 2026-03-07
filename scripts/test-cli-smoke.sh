@@ -15,6 +15,8 @@ HARNESS_HELP="$("${BIN_PATH}" harness help)"
 
 echo "==> validate root help"
 grep -q "doombox open" <<<"${ROOT_HELP}"
+grep -q "doombox rm" <<<"${ROOT_HELP}"
+grep -q "doombox list|ls" <<<"${ROOT_HELP}"
 if grep -q "doombox start" <<<"${ROOT_HELP}"; then
   echo "unexpected deprecated command in root help: doombox start"
   exit 1

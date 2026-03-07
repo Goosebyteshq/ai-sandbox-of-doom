@@ -57,4 +57,7 @@ ${COMPOSE} config >/dev/null
 echo "==> go.mod installability guard"
 ./scripts/check-no-local-replace.sh
 
+echo "==> go max-lines guard"
+./scripts/check-go-max-lines.sh
+
 echo "Fast checks passed."

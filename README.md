@@ -19,7 +19,10 @@ Then use:
 ```bash
 doombox open --agent codex /path/to/project
 doombox open --agent codex --layout windows /path/to/project
+doombox rm /path/to/project
 doombox list
+doombox ls
+doombox
 doombox harness init /path/to/project
 doombox harness status /path/to/project
 doombox harness status --json /path/to/project
@@ -41,7 +44,15 @@ doombox harness help
 - `harness report --json` output (single object or array)
 - `harness export-eval` output (`EvalRun` JSON object)
 
-If you run `doombox open` without a path, it will use your current directory and ask for explicit confirmation before mounting it.
+If you run `doombox open` without a path, doombox opens an interactive selector (current directory, running projects, or custom path).
+
+Ergonomic interactive mode:
+
+- `doombox` opens a command menu.
+- `doombox open` with missing args opens a project-selection menu.
+- `doombox rm` with missing targets opens a multi-select removal menu.
+- `doombox harness` with no subcommand opens a harness subcommand menu.
+- Use `-n` / `--non-interactive` to disable prompts.
 
 This project expects global CLI install only (no `go run` workflow).
 
@@ -279,7 +290,24 @@ See running containers:
 
 ```bash
 doombox list
+doombox ls
 doombox list --all
+```
+
+`list`/`ls` only show doombox-managed containers (names prefixed `ai-dev-`).
+
+Remove container(s) for a project:
+
+```bash
+# Remove by project path
+doombox rm /path/to/project
+
+# Remove by project/container name
+doombox rm my-project-abc123
+doombox rm ai-dev-my-project-abc123
+
+# Remove all doombox containers
+doombox rm --all
 ```
 
 Open shell in a container:

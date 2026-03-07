@@ -1,5 +1,7 @@
 pre-commit:
   commands:
+    go-max-lines:
+      run: ./scripts/check-go-max-lines.sh
     gofmt:
       run: gofmt -w cmd/doombox/main.go cmd/doombox/main_test.go
     fast-check:
