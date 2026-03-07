@@ -45,8 +45,6 @@ func main() {
 	switch os.Args[1] {
 	case "open":
 		err = c.runOpen(os.Args[2:])
-	case "start", "connect":
-		err = c.runOpen(os.Args[2:])
 	case "list":
 		err = c.runList(os.Args[2:])
 	case "harness":
@@ -78,8 +76,6 @@ func printRootHelp() {
 	fmt.Println("")
 	fmt.Println("Usage:")
 	fmt.Println("  doombox open [--agent claude|codex|gemini] [--detach] [PROJECT_PATH] [PROJECT_NAME]")
-	fmt.Println("  doombox start [--agent claude|codex|gemini] [--detach] [PROJECT_PATH] [PROJECT_NAME]")
-	fmt.Println("  doombox connect [--agent claude|codex|gemini] [--detach] [PROJECT_PATH] [PROJECT_NAME]")
 	fmt.Println("  doombox list [--all]")
 	fmt.Println("  doombox harness init [--agent codex|gemini|cloud] [PROJECT_PATH]")
 	fmt.Println("  doombox harness status [PROJECT_PATH]")

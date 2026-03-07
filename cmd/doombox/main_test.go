@@ -1,6 +1,7 @@
 package main
 
 import (
+	"io"
 	"os"
 	"path/filepath"
 	"strings"
@@ -196,6 +197,43 @@ func TestParseDoomboxContainerRows(t *testing.T) {
 	if rows[1].Project != "beta" {
 		t.Fatalf("unexpected second project: %q", rows[1].Project)
 	}
+}
+
+func TestPrintRootHelpOpenOnly(t *testing.T) {
+	out := captureStdout(t, printRootHelp)
+	if !strings.Contains(out, "doombox open") {
+		t.Fatalf("expected root help to include open command, got: %q", out)
+	}
+	if strings.Contains(out, "doombox start") {
+		t.Fatalf("expected root help to exclude deprecated start command, got: %q", out)
+	}
+	if strings.Contains(out, "doombox connect") {
+		t.Fatalf("expected root help to exclude deprecated connect command, got: %q", out)
+	}
+}
+
+func captureStdout(t *testing.T, fn func()) string {
+	t.Helper()
+	orig := os.Stdout
+	r, w, err := os.Pipe()
+	if err != nil {
+		t.Fatalf("pipe: %v", err)
+	}
+	os.Stdout = w
+	t.Cleanup(func() {
+		os.Stdout = orig
+	})
+
+	fn()
+
+	if err := w.Close(); err != nil {
+		t.Fatalf("close writer: %v", err)
+	}
+	b, err := io.ReadAll(r)
+	if err != nil {
+		t.Fatalf("read stdout: %v", err)
+	}
+	return string(b)
 }
 
 func TestCollectHarnessStatus(t *testing.T) {

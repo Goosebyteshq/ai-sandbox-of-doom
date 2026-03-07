@@ -86,7 +86,7 @@ Start with Gemini in detached mode:
 doombox open --agent gemini -d /path/to/project
 ```
 
-`doombox open` is the primary command. `start` and `connect` route to the same flow.
+`doombox open` is the primary and only project session command.
 
 ## Codex Harness (JSON)
 
@@ -182,7 +182,8 @@ Interactive `doombox open` launches a tmux session inside the container:
 You can validate harness behavior without calling an LLM:
 
 - Unit tests in `harness/session_test.go` verify lifecycle, `.doombox` initialization, and adversarial TODO scheduling.
-- `go test ./...` runs both CLI and harness package tests.
+- `make test` runs both root CLI tests and harness-module tests.
+- `make test-cli-smoke` validates the CLI help/command wiring without Docker.
 - `make fast-check` runs formatting, vetting, tests, and compose validation.
 - `make test-harness-sim` runs deterministic harness simulator tests only.
 

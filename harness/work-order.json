@@ -1,7 +1,7 @@
 {
   "version": 1,
   "title": "Doombox Harness Work Order",
-  "updated_at": "2026-03-06",
+  "updated_at": "2026-03-07",
   "owner": "doombox",
   "notes": "Atomic tasks with checkbox and status for tracking progress.",
   "phases": [
@@ -279,6 +279,41 @@
         {
           "id": "P7-T5",
           "title": "Add CI target dedicated to harness simulator tests",
+          "checkbox": "[x]",
+          "done": true,
+          "status": "done"
+        }
+      ]
+    },
+    {
+      "id": "P8",
+      "title": "CLI simplification and extraction readiness",
+      "status": "done",
+      "tasks": [
+        {
+          "id": "P8-T1",
+          "title": "Remove deprecated start/connect commands and docs references; keep open as single entrypoint",
+          "checkbox": "[x]",
+          "done": true,
+          "status": "done"
+        },
+        {
+          "id": "P8-T2",
+          "title": "Add root-help regression test to prevent reintroducing deprecated commands",
+          "checkbox": "[x]",
+          "done": true,
+          "status": "done"
+        },
+        {
+          "id": "P8-T3",
+          "title": "Split harness into its own Go module with local replace wiring for future extraction",
+          "checkbox": "[x]",
+          "done": true,
+          "status": "done"
+        },
+        {
+          "id": "P8-T4",
+          "title": "Add a CLI smoke target in CI to validate help surfaces and harness command wiring",
           "checkbox": "[x]",
           "done": true,
           "status": "done"

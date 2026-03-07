@@ -24,9 +24,17 @@ fi
 
 echo "==> go vet"
 go vet ./...
+(
+  cd harness
+  go vet ./...
+)
 
 echo "==> go test"
 go test ./...
+(
+  cd harness
+  go test ./...
+)
 
 echo "==> bash -n"
 bash -n start-agent.sh connect.sh start-claude.sh start-codex.sh start-gemini.sh scripts/*.sh
