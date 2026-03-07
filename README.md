@@ -15,6 +15,7 @@ doombox open --agent codex /path/to/project
 doombox list
 doombox harness status /path/to/project
 doombox harness score /path/to/project
+doombox harness flip --baseline baseline.json --candidate candidate.json
 ```
 
 If you run `doombox open` without a path, it will use your current directory and ask for explicit confirmation before mounting it.

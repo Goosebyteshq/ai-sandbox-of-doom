@@ -83,6 +83,7 @@ func printRootHelp() {
 	fmt.Println("  doombox list [--all]")
 	fmt.Println("  doombox harness status [PROJECT_PATH]")
 	fmt.Println("  doombox harness score [PROJECT_PATH]")
+	fmt.Println("  doombox harness flip --baseline BASELINE.json --candidate CANDIDATE.json [--json]")
 }
 
 func (c *cli) runOpen(args []string) error {
@@ -178,6 +179,8 @@ func (c *cli) runHarness(args []string) error {
 		return c.runHarnessStatus(args[1:])
 	case "score":
 		return c.runHarnessScore(args[1:])
+	case "flip":
+		return c.runHarnessFlip(args[1:])
 	default:
 		return fmt.Errorf("unknown harness command %q", args[0])
 	}
@@ -249,6 +252,53 @@ func (c *cli) runHarnessScore(args []string) error {
 	fmt.Printf("Efficiency: %.2f\n", score.Efficiency)
 	fmt.Printf("Events: %d\n", score.EventCount)
 	fmt.Printf("Checkpoints: %d\n", score.CheckpointCount)
+	return nil
+}
+
+func (c *cli) runHarnessFlip(args []string) error {
+	fs := flag.NewFlagSet("harness flip", flag.ContinueOnError)
+	fs.SetOutput(os.Stdout)
+	baselinePath := fs.String("baseline", "", "path to baseline eval-run json")
+	candidatePath := fs.String("candidate", "", "path to candidate eval-run json")
+	jsonOut := fs.Bool("json", false, "print JSON output")
+	if err := fs.Parse(args); err != nil {
+		return err
+	}
+
+	remaining := fs.Args()
+	if *baselinePath == "" && len(remaining) > 0 {
+		*baselinePath = strings.TrimSpace(remaining[0])
+	}
+	if *candidatePath == "" && len(remaining) > 1 {
+		*candidatePath = strings.TrimSpace(remaining[1])
+	}
+	if *baselinePath == "" || *candidatePath == "" {
+		return errors.New("harness flip requires --baseline and --candidate (or two positional file paths)")
+	}
+
+	report, err := collectFlipReport(*baselinePath, *candidatePath)
+	if err != nil {
+		return err
+	}
+
+	if *jsonOut {
+		b, err := json.MarshalIndent(report, "", "  ")
+		if err != nil {
+			return err
+		}
+		fmt.Println(string(b))
+		return nil
+	}
+
+	fmt.Println("Doombox Harness Flip Analysis")
+	fmt.Println("=============================")
+	fmt.Printf("Baseline: %s\n", *baselinePath)
+	fmt.Printf("Candidate: %s\n", *candidatePath)
+	fmt.Printf("Compared: %d\n", report.TotalCompared)
+	fmt.Printf("Improved: %d\n", report.Improved)
+	fmt.Printf("Regressed: %d\n", report.Regressed)
+	fmt.Printf("Unchanged: %d\n", report.Unchanged)
+	fmt.Printf("Avg score delta: %.2f\n", report.DeltaScoreAvg)
 	return nil
 }
 
@@ -326,6 +376,39 @@ func collectHarnessRubric(projectPath string) (harnessengine.TrajectoryRubric, e
 		return harnessengine.TrajectoryRubric{}, err
 	}
 	return harnessengine.ScoreTrajectory(events, checkpoints), nil
+}
+
+func collectFlipReport(baselinePath, candidatePath string) (harnessengine.FlipReport, error) {
+	baselineRuns, err := loadEvalRuns(baselinePath)
+	if err != nil {
+		return harnessengine.FlipReport{}, fmt.Errorf("load baseline runs: %w", err)
+	}
+	candidateRuns, err := loadEvalRuns(candidatePath)
+	if err != nil {
+		return harnessengine.FlipReport{}, fmt.Errorf("load candidate runs: %w", err)
+	}
+	return harnessengine.AnalyzeFlips(baselineRuns, candidateRuns), nil
+}
+
+func loadEvalRuns(path string) ([]harnessengine.EvalRun, error) {
+	b, err := os.ReadFile(path)
+	if err != nil {
+		return nil, err
+	}
+
+	runs := []harnessengine.EvalRun{}
+	if err := json.Unmarshal(b, &runs); err == nil {
+		return runs, nil
+	}
+
+	var wrapped struct {
+		Runs []harnessengine.EvalRun `json:"runs"`
+	}
+	if err := json.Unmarshal(b, &wrapped); err == nil && wrapped.Runs != nil {
+		return wrapped.Runs, nil
+	}
+
+	return nil, errors.New("unsupported eval-run json format (expected []EvalRun or {\"runs\": [...]})")
 }
 
 func readEventsJSONL(path string) ([]map[string]any, error) {

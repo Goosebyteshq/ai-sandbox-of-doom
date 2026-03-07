@@ -272,3 +272,60 @@ func TestCollectHarnessRubric(t *testing.T) {
 		t.Fatalf("expected positive score, got %.2f", rubric.Score)
 	}
 }
+
+func TestLoadEvalRuns(t *testing.T) {
+	dir := t.TempDir()
+	arrayPath := filepath.Join(dir, "array.json")
+	wrappedPath := filepath.Join(dir, "wrapped.json")
+
+	arrayJSON := `[{"id":"a","passed":true,"rubric_score":0.9},{"id":"b","passed":false,"rubric_score":0.2}]`
+	if err := os.WriteFile(arrayPath, []byte(arrayJSON), 0644); err != nil {
+		t.Fatalf("write array: %v", err)
+	}
+	wrappedJSON := `{"runs":[{"id":"c","passed":true,"rubric_score":0.8}]}`
+	if err := os.WriteFile(wrappedPath, []byte(wrappedJSON), 0644); err != nil {
+		t.Fatalf("write wrapped: %v", err)
+	}
+
+	arrayRuns, err := loadEvalRuns(arrayPath)
+	if err != nil {
+		t.Fatalf("loadEvalRuns array: %v", err)
+	}
+	if len(arrayRuns) != 2 {
+		t.Fatalf("expected 2 runs from array, got %d", len(arrayRuns))
+	}
+
+	wrappedRuns, err := loadEvalRuns(wrappedPath)
+	if err != nil {
+		t.Fatalf("loadEvalRuns wrapped: %v", err)
+	}
+	if len(wrappedRuns) != 1 || wrappedRuns[0].ID != "c" {
+		t.Fatalf("unexpected wrapped runs: %#v", wrappedRuns)
+	}
+}
+
+func TestCollectFlipReport(t *testing.T) {
+	dir := t.TempDir()
+	base := filepath.Join(dir, "baseline.json")
+	cand := filepath.Join(dir, "candidate.json")
+
+	baseJSON := `[{"id":"case-1","passed":true,"rubric_score":0.8},{"id":"case-2","passed":false,"rubric_score":0.3}]`
+	candJSON := `[{"id":"case-1","passed":false,"rubric_score":0.5},{"id":"case-2","passed":true,"rubric_score":0.7}]`
+	if err := os.WriteFile(base, []byte(baseJSON), 0644); err != nil {
+		t.Fatalf("write baseline: %v", err)
+	}
+	if err := os.WriteFile(cand, []byte(candJSON), 0644); err != nil {
+		t.Fatalf("write candidate: %v", err)
+	}
+
+	report, err := collectFlipReport(base, cand)
+	if err != nil {
+		t.Fatalf("collectFlipReport: %v", err)
+	}
+	if report.TotalCompared != 2 {
+		t.Fatalf("expected 2 compared, got %d", report.TotalCompared)
+	}
+	if report.Regressed != 1 || report.Improved != 1 {
+		t.Fatalf("unexpected regression/improvement counts: regressed=%d improved=%d", report.Regressed, report.Improved)
+	}
+}
