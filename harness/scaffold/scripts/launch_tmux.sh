@@ -18,7 +18,7 @@ fi
 
 if tmux has-session -t "${session_name}" 2>/dev/null; then
   echo "Doombox tmux session: ${session_name}"
-  echo "Tmux quick help: Ctrl-b + n/p (next/prev), Ctrl-b + 1..4 (window), Ctrl-b + d (detach)"
+  echo "Tmux quick help: F10 (detach), Ctrl-b + n/p (next/prev), Ctrl-b + 1..4 (window), Ctrl-b + d (detach)"
   exec tmux attach -t "${session_name}"
 fi
 
@@ -44,8 +44,15 @@ case "${layout}" in
     ;;
 esac
 
+# Make exiting obvious for non-tmux users:
+# - F10 detaches immediately without a prefix
+# - prefix + q also detaches
+tmux bind-key -T root F10 detach-client
+tmux bind-key -T prefix q detach-client
+tmux set-option -t "${session_name}" -g status-right "F10 detach | C-b q detach | C-b ? help"
+
 echo "Doombox tmux session: ${session_name} (${layout})"
-echo "Tmux quick help: Ctrl-b + n/p (next/prev), Ctrl-b + 1..4 (window), Ctrl-b + d (detach)"
+echo "Tmux quick help: F10 (detach), Ctrl-b + n/p (next/prev), Ctrl-b + 1..4 (window), Ctrl-b + d (detach)"
 if [[ "${layout}" == "windows" ]]; then
   echo "Windows: 1=agent 2=supervisor 3=events 4=shell"
 fi
