@@ -85,6 +85,7 @@ func printRootHelp() {
 	fmt.Println("  doombox harness status [PROJECT_PATH]")
 	fmt.Println("  doombox harness score [PROJECT_PATH]")
 	fmt.Println("  doombox harness report [--json] [--strict] [--min-score 0.70] [PROJECT_PATH]")
+	fmt.Println("  doombox harness export-eval [--out FILE] [PROJECT_PATH]")
 	fmt.Println("  doombox harness flip --baseline BASELINE.json --candidate CANDIDATE.json [--json] [--strict]")
 }
 
@@ -189,6 +190,8 @@ func (c *cli) runHarness(args []string) error {
 		return c.runHarnessScore(args[1:])
 	case "report":
 		return c.runHarnessReport(args[1:])
+	case "export-eval":
+		return c.runHarnessExportEval(args[1:])
 	case "flip":
 		return c.runHarnessFlip(args[1:])
 	default:
@@ -204,6 +207,7 @@ func printHarnessHelp() {
 	fmt.Println("  doombox harness status [--json] [PROJECT_PATH]")
 	fmt.Println("  doombox harness score [--json] [PROJECT_PATH]")
 	fmt.Println("  doombox harness report [--json] [--strict] [--min-score 0.70] [PROJECT_PATH]")
+	fmt.Println("  doombox harness export-eval [--out FILE] [PROJECT_PATH]")
 	fmt.Println("  doombox harness flip --baseline BASELINE.json --candidate CANDIDATE.json [--json] [--strict]")
 }
 
@@ -477,6 +481,68 @@ func (c *cli) runHarnessReport(args []string) error {
 	return nil
 }
 
+func (c *cli) runHarnessExportEval(args []string) error {
+	fs := flag.NewFlagSet("harness export-eval", flag.ContinueOnError)
+	fs.SetOutput(os.Stdout)
+	outPath := fs.String("out", "", "write eval-run json to this file")
+	runID := fs.String("id", "", "override eval run id")
+	minScore := fs.Float64("min-score", 0.70, "minimum rubric score required for pass")
+	maxOpenTodos := fs.Int("max-open-todos", 0, "maximum allowed open todos for pass")
+	maxBlockRisks := fs.Int("max-block-risks", 0, "maximum allowed block risk events for pass")
+	if err := fs.Parse(args); err != nil {
+		return err
+	}
+
+	projectPath := ""
+	remaining := fs.Args()
+	if len(remaining) > 0 {
+		projectPath = strings.TrimSpace(remaining[0])
+	}
+	if projectPath == "" {
+		cwd, err := os.Getwd()
+		if err != nil {
+			return err
+		}
+		projectPath = cwd
+	}
+
+	absPath, err := filepath.Abs(projectPath)
+	if err != nil {
+		return err
+	}
+	report, err := collectHarnessReport(absPath)
+	if err != nil {
+		return err
+	}
+	health := evaluateHarnessHealth(report, harnessHealthOptions{
+		MinScore:     *minScore,
+		MaxOpenTodos: *maxOpenTodos,
+		MaxBlockRisk: *maxBlockRisks,
+	})
+	eval := evalRunFromHarnessReportWithHealth(report, health, *runID)
+
+	b, err := json.MarshalIndent(eval, "", "  ")
+	if err != nil {
+		return err
+	}
+	fmt.Println(string(b))
+
+	if strings.TrimSpace(*outPath) != "" {
+		target := strings.TrimSpace(*outPath)
+		if !filepath.IsAbs(target) {
+			target = filepath.Join(absPath, target)
+		}
+		if err := os.MkdirAll(filepath.Dir(target), 0755); err != nil {
+			return err
+		}
+		if err := os.WriteFile(target, append(b, '\n'), 0644); err != nil {
+			return err
+		}
+		fmt.Printf("Exported eval run to %s\n", target)
+	}
+	return nil
+}
+
 type harnessStatus struct {
 	EventCount       int    `json:"event_count"`
 	CheckpointCount  int    `json:"checkpoint_count"`
@@ -721,6 +787,21 @@ func evalRunFromHarnessReport(report harnessReportSnapshot, idx int) harnessengi
 	return harnessengine.EvalRun{
 		ID:          id,
 		Passed:      passed,
+		RubricScore: report.Rubric.Score,
+	}
+}
+
+func evalRunFromHarnessReportWithHealth(report harnessReport, health harnessHealth, overrideID string) harnessengine.EvalRun {
+	id := strings.TrimSpace(overrideID)
+	if id == "" {
+		id = strings.TrimSpace(report.ProjectPath)
+	}
+	if id == "" {
+		id = "current-run"
+	}
+	return harnessengine.EvalRun{
+		ID:          id,
+		Passed:      health.Pass,
 		RubricScore: report.Rubric.Score,
 	}
 }

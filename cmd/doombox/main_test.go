@@ -448,3 +448,46 @@ func TestEvaluateFlipGate(t *testing.T) {
 		t.Fatalf("expected 2 gate reasons, got %d", len(gate.Reasons))
 	}
 }
+
+func TestEvalRunFromHarnessReportWithHealth(t *testing.T) {
+	report := harnessReport{
+		ProjectPath: "/tmp/project-a",
+		Rubric: harnessengine.TrajectoryRubric{
+			Score: 0.88,
+		},
+	}
+	run := evalRunFromHarnessReportWithHealth(report, harnessHealth{Pass: true}, "")
+	if run.ID != "/tmp/project-a" {
+		t.Fatalf("unexpected run id: %q", run.ID)
+	}
+	if !run.Passed {
+		t.Fatal("expected passed=true")
+	}
+	if run.RubricScore != 0.88 {
+		t.Fatalf("unexpected rubric score: %.2f", run.RubricScore)
+	}
+}
+
+func TestRunHarnessExportEvalWritesFile(t *testing.T) {
+	projectDir := t.TempDir()
+	doomboxDir := filepath.Join(projectDir, ".doombox")
+	if err := os.MkdirAll(filepath.Join(doomboxDir, "checkpoints"), 0755); err != nil {
+		t.Fatalf("mkdir: %v", err)
+	}
+	if err := os.WriteFile(filepath.Join(doomboxDir, "events.jsonl"), []byte(`{"version":1,"timestamp":"2026-03-07T00:00:00Z","event_type":"test_result","source":"hook","payload":{"result":"pass"}}`+"\n"), 0644); err != nil {
+		t.Fatalf("write events: %v", err)
+	}
+	if err := os.WriteFile(filepath.Join(doomboxDir, "todo.json"), []byte(`{"items":[]}`), 0644); err != nil {
+		t.Fatalf("write todo: %v", err)
+	}
+
+	outPath := filepath.Join(projectDir, "eval", "run.json")
+	c := &cli{}
+	err := c.runHarnessExportEval([]string{"--out", outPath, "--id", "test-run", projectDir})
+	if err != nil {
+		t.Fatalf("runHarnessExportEval: %v", err)
+	}
+	if _, err := os.Stat(outPath); err != nil {
+		t.Fatalf("expected output file at %s: %v", outPath, err)
+	}
+}

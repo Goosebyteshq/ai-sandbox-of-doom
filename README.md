@@ -21,6 +21,7 @@ doombox harness score --json /path/to/project
 doombox harness report /path/to/project
 doombox harness report --json /path/to/project
 doombox harness report --strict --min-score 0.8 /path/to/project
+doombox harness export-eval --out eval/current.json /path/to/project
 doombox harness flip --baseline baseline.json --candidate candidate.json
 doombox harness flip --strict --max-regressions 0 --baseline baseline.json --candidate candidate.json
 doombox harness help
@@ -30,6 +31,7 @@ doombox harness help
 - `[]EvalRun`
 - `{"runs":[...]}`
 - `harness report --json` output (single object or array)
+- `harness export-eval` output (`EvalRun` JSON object)
 
 If you run `doombox open` without a path, it will use your current directory and ask for explicit confirmation before mounting it.
 
