@@ -306,7 +306,7 @@
         },
         {
           "id": "P8-T3",
-          "title": "Split harness into its own Go module with local replace wiring for future extraction",
+          "title": "Keep harness extraction-ready without root go.mod replace directives (preserve installability)",
           "checkbox": "[x]",
           "done": true,
           "status": "done"
