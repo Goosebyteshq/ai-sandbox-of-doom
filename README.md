@@ -25,6 +25,7 @@ This project expects global CLI install only (no `go run` workflow).
 - Only the project path you pass is bind-mounted to `/workspace/project`.
 - Each project gets its own container runtime and its own home volume.
 - Go and Playwright workflows run inside the container.
+- Codex sessions can keep structured JSON context under `.doombox/`.
 
 ## What is installed
 
@@ -66,7 +67,35 @@ Start with Gemini in detached mode:
 doombox open --agent gemini -d /path/to/project
 ```
 
-No aliases: use `doombox open ...` directly.
+`doombox open` is the primary command. `start` and `connect` route to the same flow.
+
+## Codex Harness (JSON)
+
+When you run `doombox open --agent codex ...`, doombox initializes:
+
+- `.doombox/harness.json` (provider + interval config)
+- `.doombox/todo.json` (structured task list)
+- `.doombox/session-log.jsonl` (append-only event log)
+
+Session behavior for Codex:
+
+- Writes `session_start` / `session_end` events.
+- Auto-queues an `adversarial_check` TODO when due.
+- Runs a periodic timer (default 10 minutes) while the Codex session is active.
+
+Current defaults are Codex-specific, but the config shape is provider-based so Gemini/Cloud can be added to the same harness flow later.
+
+## Harness testing (no live LLM required)
+
+You can validate harness behavior without calling an LLM:
+
+- Unit tests in `harness/session_test.go` verify lifecycle, `.doombox` initialization, and adversarial TODO scheduling.
+- `go test ./...` runs both CLI and harness package tests.
+- `make fast-check` runs formatting, vetting, tests, and compose validation.
+
+Planned next step:
+
+- Add a deterministic mock-agent adapter and fixture-driven harness integration tests so supervisor triggers and commit/push gates can be validated in CI with zero model calls.
 
 ## Agent shortcuts
 

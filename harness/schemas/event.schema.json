@@ -1,0 +1,75 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "https://doombox.dev/schemas/event.schema.json",
+  "title": "Doombox Harness Event",
+  "type": "object",
+  "additionalProperties": false,
+  "required": [
+    "version",
+    "timestamp",
+    "event_type",
+    "source"
+  ],
+  "properties": {
+    "version": {
+      "type": "integer",
+      "minimum": 1
+    },
+    "id": {
+      "type": "string",
+      "minLength": 1
+    },
+    "timestamp": {
+      "type": "string",
+      "format": "date-time"
+    },
+    "event_type": {
+      "type": "string",
+      "enum": [
+        "session_start",
+        "session_end",
+        "tool_invocation",
+        "edit_cluster",
+        "test_result",
+        "checkpoint_due",
+        "checkpoint_written",
+        "gate_decision",
+        "permission_denied"
+      ]
+    },
+    "source": {
+      "type": "string",
+      "enum": [
+        "agent",
+        "supervisor",
+        "gate",
+        "hook",
+        "system"
+      ]
+    },
+    "agent": {
+      "type": "string",
+      "enum": [
+        "codex",
+        "gemini",
+        "cloud",
+        "unknown"
+      ]
+    },
+    "message": {
+      "type": "string"
+    },
+    "risk_classification": {
+      "type": "string",
+      "enum": [
+        "safe",
+        "justify",
+        "block"
+      ]
+    },
+    "payload": {
+      "type": "object",
+      "additionalProperties": true
+    }
+  }
+}

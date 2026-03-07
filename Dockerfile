@@ -80,6 +80,9 @@ RUN useradd -m -s /bin/bash developer && \
 # Set working directory
 WORKDIR /workspace
 
+# Inject harness assets so runtime scripts and policy ship with the image
+COPY --chown=developer:developer harness /opt/doombox/harness
+
 # Switch to developer user
 USER developer
 

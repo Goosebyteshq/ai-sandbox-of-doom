@@ -16,6 +16,8 @@ import (
 	"regexp"
 	"sort"
 	"strings"
+
+	"github.com/Goosebyteshq/doombox/harness"
 )
 
 type cli struct {
@@ -108,9 +110,17 @@ func (c *cli) runOpen(args []string) error {
 		return err
 	}
 	if running {
+		if !*interactive {
+			fmt.Printf("Container already running for project %s.\n", projectName)
+			fmt.Println("Container running in background.")
+			fmt.Printf("Use `doombox open --agent %s %s` to connect.\n", *agent, absPath)
+			return nil
+		}
 		fmt.Printf("Container already running for project %s. Connecting...\n", projectName)
 		fmt.Printf("Connecting to %s for project: %s\n", *agent, projectName)
-		return c.run("docker", []string{"exec", "-it", containerName, "bash", "-lc", agentCmd}, nil)
+		return c.runWithHarness(*agent, absPath, func() error {
+			return c.run("docker", []string{"exec", "-it", containerName, "bash", "-lc", agentCmd}, nil)
+		})
 	}
 
 	fmt.Printf("No running container for project %s. Starting a new one...\n", projectName)
@@ -269,6 +279,10 @@ func samePath(a, b string) bool {
 	return ca == cb
 }
 
+func (c *cli) runWithHarness(agent, projectPath string, runFn func() error) error {
+	return harness.RunWithSession(agent, projectPath, os.Stdout, runFn)
+}
+
 func (c *cli) startOrReuseSession(agent, absPath, projectName string, interactive bool) error {
 	agentCmd, err := commandForAgent(agent, os.Getenv("AGENT_CMD"))
 	if err != nil {
@@ -320,7 +334,9 @@ func (c *cli) startOrReuseSession(agent, absPath, projectName string, interactiv
 
 	if interactive {
 		fmt.Printf("Launching %s...\n\n", agent)
-		return c.compose(composeFile, []string{"-p", composeProject, "exec", "ai-dev", "bash", "-lc", agentCmd}, env)
+		return c.runWithHarness(agent, absPath, func() error {
+			return c.compose(composeFile, []string{"-p", composeProject, "exec", "ai-dev", "bash", "-lc", agentCmd}, env)
+		})
 	}
 
 	fmt.Println("Container running in background.")
@@ -458,6 +474,11 @@ func prepareRuntimeFiles() (runtimeDir string, composeFile string, cleanup func(
 			cleanup()
 			return "", "", nil, fmt.Errorf("write runtime asset %s: %w", f.dst, writeErr)
 		}
+	}
+
+	if err := harness.WriteScaffold(filepath.Join(runtimeDir, "harness")); err != nil {
+		cleanup()
+		return "", "", nil, fmt.Errorf("write harness scaffold: %w", err)
 	}
 
 	return runtimeDir, filepath.Join(runtimeDir, "docker-compose.yml"), cleanup, nil

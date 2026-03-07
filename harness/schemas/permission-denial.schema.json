@@ -1,0 +1,62 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "https://doombox.dev/schemas/permission-denial.schema.json",
+  "title": "Doombox Harness Permission Denial",
+  "type": "object",
+  "additionalProperties": false,
+  "required": [
+    "version",
+    "timestamp",
+    "agent",
+    "command",
+    "decision",
+    "reason"
+  ],
+  "properties": {
+    "version": {
+      "type": "integer",
+      "minimum": 1
+    },
+    "timestamp": {
+      "type": "string",
+      "format": "date-time"
+    },
+    "agent": {
+      "type": "string",
+      "enum": [
+        "codex",
+        "gemini",
+        "cloud",
+        "unknown"
+      ]
+    },
+    "command": {
+      "type": "string",
+      "minLength": 1
+    },
+    "args": {
+      "type": "array",
+      "items": {
+        "type": "string"
+      }
+    },
+    "cwd": {
+      "type": "string"
+    },
+    "decision": {
+      "type": "string",
+      "enum": [
+        "blocked",
+        "needs_approval",
+        "allowed_after_review"
+      ]
+    },
+    "reason": {
+      "type": "string",
+      "minLength": 1
+    },
+    "policy_rule": {
+      "type": "string"
+    }
+  }
+}

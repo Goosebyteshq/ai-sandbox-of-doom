@@ -1,0 +1,76 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "https://doombox.dev/schemas/policy.schema.json",
+  "title": "Doombox Harness Policy",
+  "type": "object",
+  "additionalProperties": false,
+  "required": [
+    "version",
+    "provider",
+    "checkpoint_every_actions",
+    "adversarial_interval_minutes"
+  ],
+  "properties": {
+    "version": {
+      "type": "integer",
+      "minimum": 1
+    },
+    "provider": {
+      "type": "string",
+      "minLength": 1
+    },
+    "checkpoint_every_actions": {
+      "type": "integer",
+      "minimum": 1,
+      "maximum": 20
+    },
+    "adversarial_interval_minutes": {
+      "type": "integer",
+      "minimum": 0,
+      "maximum": 1440
+    },
+    "fast_tests": {
+      "type": "array",
+      "items": {
+        "type": "string",
+        "minLength": 1
+      }
+    },
+    "integration_tests": {
+      "type": "array",
+      "items": {
+        "type": "string",
+        "minLength": 1
+      }
+    },
+    "risky_paths": {
+      "type": "array",
+      "items": {
+        "type": "string",
+        "minLength": 1
+      }
+    },
+    "generated_file_patterns": {
+      "type": "array",
+      "items": {
+        "type": "string",
+        "minLength": 1
+      }
+    },
+    "gates": {
+      "type": "object",
+      "additionalProperties": false,
+      "properties": {
+        "require_non_obvious_justification": {
+          "type": "boolean"
+        },
+        "require_green_tests_before_commit": {
+          "type": "boolean"
+        },
+        "run_integration_on_pre_push": {
+          "type": "boolean"
+        }
+      }
+    }
+  }
+}

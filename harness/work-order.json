@@ -1,0 +1,289 @@
+{
+  "version": 1,
+  "title": "Doombox Harness Work Order",
+  "updated_at": "2026-03-06",
+  "owner": "doombox",
+  "notes": "Atomic tasks with checkbox and status for tracking progress.",
+  "phases": [
+    {
+      "id": "P0",
+      "title": "Planning and contracts",
+      "status": "done",
+      "tasks": [
+        {
+          "id": "P0-T1",
+          "title": "Create blueprint document with agreed behavior",
+          "checkbox": "[x]",
+          "done": true,
+          "status": "done"
+        },
+        {
+          "id": "P0-T2",
+          "title": "Add research background and references",
+          "checkbox": "[x]",
+          "done": true,
+          "status": "done"
+        },
+        {
+          "id": "P0-T3",
+          "title": "Define JSON work-order tracker with atomic tasks",
+          "checkbox": "[x]",
+          "done": true,
+          "status": "done"
+        },
+        {
+          "id": "P0-T4",
+          "title": "Define initial JSON schemas for events and checkpoints",
+          "checkbox": "[x]",
+          "done": true,
+          "status": "done"
+        }
+      ]
+    },
+    {
+      "id": "P1",
+      "title": "Harness extraction scaffold",
+      "status": "done",
+      "tasks": [
+        {
+          "id": "P1-T1",
+          "title": "Create top-level harness directory layout (engine, adapters, schemas, scripts, docs)",
+          "checkbox": "[x]",
+          "done": true,
+          "status": "done"
+        },
+        {
+          "id": "P1-T2",
+          "title": "Move Codex harness logic from CLI file into harness package entrypoint",
+          "checkbox": "[x]",
+          "done": true,
+          "status": "done"
+        },
+        {
+          "id": "P1-T3",
+          "title": "Wire CLI to call harness package APIs",
+          "checkbox": "[x]",
+          "done": true,
+          "status": "done"
+        },
+        {
+          "id": "P1-T4",
+          "title": "Inject harness directory into container image at a stable path",
+          "checkbox": "[x]",
+          "done": true,
+          "status": "done"
+        }
+      ]
+    },
+    {
+      "id": "P2",
+      "title": "Event-driven supervisor",
+      "status": "todo",
+      "tasks": [
+        {
+          "id": "P2-T1",
+          "title": "Implement event bus writer for tool calls, edits, tests, gates",
+          "checkbox": "[ ]",
+          "done": false,
+          "status": "todo"
+        },
+        {
+          "id": "P2-T2",
+          "title": "Implement action-cluster checkpoint trigger every N actions",
+          "checkbox": "[ ]",
+          "done": false,
+          "status": "todo"
+        },
+        {
+          "id": "P2-T3",
+          "title": "Implement immediate checkpoint triggers (test fail, risky touch, large diff, pre-commit, pre-push)",
+          "checkbox": "[ ]",
+          "done": false,
+          "status": "todo"
+        },
+        {
+          "id": "P2-T4",
+          "title": "Persist checkpoint payload with goal, files changed, out-of-scope files, return-to-scope step",
+          "checkbox": "[ ]",
+          "done": false,
+          "status": "todo"
+        }
+      ]
+    },
+    {
+      "id": "P3",
+      "title": "Safety and permission observability",
+      "status": "todo",
+      "tasks": [
+        {
+          "id": "P3-T1",
+          "title": "Add dedicated permission-denials log file",
+          "checkbox": "[ ]",
+          "done": false,
+          "status": "todo"
+        },
+        {
+          "id": "P3-T2",
+          "title": "Add tool invocation classification fields (safe, justify, block)",
+          "checkbox": "[ ]",
+          "done": false,
+          "status": "todo"
+        },
+        {
+          "id": "P3-T3",
+          "title": "Add policy rules for sensitive paths and risky command patterns",
+          "checkbox": "[ ]",
+          "done": false,
+          "status": "todo"
+        }
+      ]
+    },
+    {
+      "id": "P4",
+      "title": "Hard gates and test discipline",
+      "status": "todo",
+      "tasks": [
+        {
+          "id": "P4-T1",
+          "title": "Implement harness-managed pre-commit gate",
+          "checkbox": "[ ]",
+          "done": false,
+          "status": "todo"
+        },
+        {
+          "id": "P4-T2",
+          "title": "Implement generated-file detection and unrelated-file detection",
+          "checkbox": "[ ]",
+          "done": false,
+          "status": "todo"
+        },
+        {
+          "id": "P4-T3",
+          "title": "Require non-obvious file justifications at commit gate",
+          "checkbox": "[ ]",
+          "done": false,
+          "status": "todo"
+        },
+        {
+          "id": "P4-T4",
+          "title": "Run fast tests after meaningful edits and block commit when stale",
+          "checkbox": "[ ]",
+          "done": false,
+          "status": "todo"
+        },
+        {
+          "id": "P4-T5",
+          "title": "Implement pre-push integration-test policy",
+          "checkbox": "[ ]",
+          "done": false,
+          "status": "todo"
+        }
+      ]
+    },
+    {
+      "id": "P5",
+      "title": "tmux UX and provider adapters",
+      "status": "todo",
+      "tasks": [
+        {
+          "id": "P5-T1",
+          "title": "Start tmux session automatically with agent, supervisor, and event panes",
+          "checkbox": "[ ]",
+          "done": false,
+          "status": "todo"
+        },
+        {
+          "id": "P5-T2",
+          "title": "Expose provider adapter interface for Codex, Gemini, Cloud",
+          "checkbox": "[ ]",
+          "done": false,
+          "status": "todo"
+        },
+        {
+          "id": "P5-T3",
+          "title": "Implement Codex adapter first",
+          "checkbox": "[ ]",
+          "done": false,
+          "status": "todo"
+        },
+        {
+          "id": "P5-T4",
+          "title": "Add stubs for Gemini and Cloud adapters",
+          "checkbox": "[ ]",
+          "done": false,
+          "status": "todo"
+        }
+      ]
+    },
+    {
+      "id": "P6",
+      "title": "Evaluation and release discipline",
+      "status": "todo",
+      "tasks": [
+        {
+          "id": "P6-T1",
+          "title": "Add trajectory rubric scoring over events/checkpoints",
+          "checkbox": "[ ]",
+          "done": false,
+          "status": "todo"
+        },
+        {
+          "id": "P6-T2",
+          "title": "Add canary mode for policy changes",
+          "checkbox": "[ ]",
+          "done": false,
+          "status": "todo"
+        },
+        {
+          "id": "P6-T3",
+          "title": "Add flip analysis report for regressions",
+          "checkbox": "[ ]",
+          "done": false,
+          "status": "todo"
+        }
+      ]
+    },
+    {
+      "id": "P7",
+      "title": "Harness testing without LLM",
+      "status": "in_progress",
+      "tasks": [
+        {
+          "id": "P7-T1",
+          "title": "Keep unit tests for harness session lifecycle and todo/event behavior",
+          "checkbox": "[x]",
+          "done": true,
+          "status": "done"
+        },
+        {
+          "id": "P7-T2",
+          "title": "Add mock-agent adapter that emits deterministic scripted actions",
+          "checkbox": "[ ]",
+          "done": false,
+          "status": "todo"
+        },
+        {
+          "id": "P7-T3",
+          "title": "Add fixture-driven integration tests for event triggers and hard gates",
+          "checkbox": "[ ]",
+          "done": false,
+          "status": "todo"
+        },
+        {
+          "id": "P7-T4",
+          "title": "Add replay tests for events.jsonl to validate derived checkpoint/todo state",
+          "checkbox": "[ ]",
+          "done": false,
+          "status": "todo"
+        },
+        {
+          "id": "P7-T5",
+          "title": "Add CI target dedicated to harness simulator tests",
+          "checkbox": "[ ]",
+          "done": false,
+          "status": "todo"
+        }
+      ]
+    }
+  ]
+}
