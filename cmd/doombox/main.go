@@ -75,7 +75,7 @@ func printRootHelp() {
 	fmt.Println("AI Sandbox CLI")
 	fmt.Println("")
 	fmt.Println("Usage:")
-	fmt.Println("  doombox open [--agent claude|codex|gemini] [--detach] [PROJECT_PATH] [PROJECT_NAME]")
+	fmt.Println("  doombox open [--agent claude|codex|gemini] [--layout windows|compact] [--detach] [PROJECT_PATH] [PROJECT_NAME]")
 	fmt.Println("  doombox list [--all]")
 	fmt.Println("  doombox harness init [--agent codex|gemini|cloud] [PROJECT_PATH]")
 	fmt.Println("  doombox harness status [PROJECT_PATH]")
@@ -91,6 +91,7 @@ func (c *cli) runOpen(args []string) error {
 	fs.SetOutput(os.Stdout)
 	agent := fs.String("agent", envOr("AGENT", "claude"), "agent: claude|codex|gemini")
 	fs.StringVar(agent, "a", envOr("AGENT", "claude"), "agent: claude|codex|gemini")
+	layout := fs.String("layout", envOr("DOOMBOX_LAYOUT", "windows"), "tmux layout: windows|compact")
 	detach := fs.Bool("detach", false, "connect if running; otherwise start container and exit")
 	fs.BoolVar(detach, "d", false, "connect if running; otherwise start container and exit")
 	interactive := fs.Bool("interactive", true, "connect if running; otherwise start and connect")
@@ -101,13 +102,12 @@ func (c *cli) runOpen(args []string) error {
 	if *detach {
 		*interactive = false
 	}
-
-	absPath, projectName, err := resolveProjectPathAndName(fs.Args(), os.Stdin, os.Stdout)
+	normalizedLayout, err := normalizeTmuxLayout(*layout)
 	if err != nil {
 		return err
 	}
 
-	agentCmd, err := commandForAgent(*agent, os.Getenv("AGENT_CMD"))
+	absPath, projectName, err := resolveProjectPathAndName(fs.Args(), os.Stdin, os.Stdout)
 	if err != nil {
 		return err
 	}
@@ -126,13 +126,25 @@ func (c *cli) runOpen(args []string) error {
 		}
 		fmt.Printf("Container already running for project %s. Connecting...\n", projectName)
 		fmt.Printf("Connecting to %s for project: %s\n", *agent, projectName)
+		sessionName := "doombox-" + projectName
+		agentCmd, err := commandForAgent(*agent, os.Getenv("AGENT_CMD"))
+		if err != nil {
+			return err
+		}
 		return c.runWithHarness(*agent, absPath, func() error {
-			return c.run("docker", []string{"exec", "-it", containerName, "bash", "-lc", agentCmd}, nil)
+			return c.run("docker", []string{
+				"exec", "-it",
+				"-e", "DOOMBOX_AGENT_CMD=" + agentCmd,
+				"-e", "DOOMBOX_TMUX_SESSION=" + sessionName,
+				"-e", "DOOMBOX_LAYOUT=" + normalizedLayout,
+				containerName,
+				"bash", "-lc", "/opt/doombox/harness/scripts/launch_tmux.sh",
+			}, nil)
 		})
 	}
 
 	fmt.Printf("No running container for project %s. Starting a new one...\n", projectName)
-	return c.startOrReuseSession(*agent, absPath, projectName, *interactive)
+	return c.startOrReuseSession(*agent, absPath, projectName, *interactive, normalizedLayout)
 }
 
 func (c *cli) runList(args []string) error {
@@ -1086,7 +1098,7 @@ func (c *cli) runWithHarness(agent, projectPath string, runFn func() error) erro
 	return harness.RunWithSession(agent, projectPath, os.Stdout, runFn)
 }
 
-func (c *cli) startOrReuseSession(agent, absPath, projectName string, interactive bool) error {
+func (c *cli) startOrReuseSession(agent, absPath, projectName string, interactive bool, layout string) error {
 	agentCmd, err := commandForAgent(agent, os.Getenv("AGENT_CMD"))
 	if err != nil {
 		return err
@@ -1143,6 +1155,7 @@ func (c *cli) startOrReuseSession(agent, absPath, projectName string, interactiv
 			"exec",
 			"-e", "DOOMBOX_AGENT_CMD=" + agentCmd,
 			"-e", "DOOMBOX_TMUX_SESSION=" + sessionName,
+			"-e", "DOOMBOX_LAYOUT=" + layout,
 			"ai-dev", "bash", "-lc", "/opt/doombox/harness/scripts/launch_tmux.sh",
 		}
 		return c.runWithHarness(agent, absPath, func() error {
@@ -1247,6 +1260,19 @@ func envOr(key, fallback string) string {
 		return fallback
 	}
 	return v
+}
+
+func normalizeTmuxLayout(layout string) (string, error) {
+	v := strings.ToLower(strings.TrimSpace(layout))
+	if v == "" {
+		v = "windows"
+	}
+	switch v {
+	case "windows", "compact":
+		return v, nil
+	default:
+		return "", fmt.Errorf("unsupported --layout %q (expected windows|compact)", layout)
+	}
 }
 
 func fatal(err error) {

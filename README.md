@@ -18,6 +18,7 @@ Then use:
 
 ```bash
 doombox open --agent codex /path/to/project
+doombox open --agent codex --layout windows /path/to/project
 doombox list
 doombox harness init /path/to/project
 doombox harness status /path/to/project
@@ -195,9 +196,18 @@ Provider adapter registry is in `harness/adapters/provider.go`:
 
 Interactive `doombox open` launches a tmux session inside the container:
 
-- pane 1: selected agent CLI
-- pane 2: harness supervisor HUD (events/checkpoints/todos/risk)
-- pane 3: live `.doombox/events.jsonl` tail
+- default `--layout windows`:
+- window 1 `agent`: selected agent CLI
+- window 2 `supervisor`: harness HUD (events/checkpoints/todos/risk)
+- window 3 `events`: live `.doombox/events.jsonl` tail
+- window 4 `shell`: interactive terminal inside the container
+- optional `--layout compact`: all four surfaces in one pane layout
+
+Tmux quick help shown on attach:
+
+- `Ctrl-b n/p`: next/previous window
+- `Ctrl-b 1..4`: jump to a window
+- `Ctrl-b d`: detach from tmux
 
 ## Harness testing (no live LLM required)
 

@@ -204,11 +204,46 @@ func TestPrintRootHelpOpenOnly(t *testing.T) {
 	if !strings.Contains(out, "doombox open") {
 		t.Fatalf("expected root help to include open command, got: %q", out)
 	}
+	if !strings.Contains(out, "--layout windows|compact") {
+		t.Fatalf("expected root help to include layout flag, got: %q", out)
+	}
 	if strings.Contains(out, "doombox start") {
 		t.Fatalf("expected root help to exclude deprecated start command, got: %q", out)
 	}
 	if strings.Contains(out, "doombox connect") {
 		t.Fatalf("expected root help to exclude deprecated connect command, got: %q", out)
+	}
+}
+
+func TestNormalizeTmuxLayout(t *testing.T) {
+	tests := []struct {
+		in      string
+		want    string
+		wantErr bool
+	}{
+		{in: "", want: "windows"},
+		{in: "windows", want: "windows"},
+		{in: "WINDOWS", want: "windows"},
+		{in: "compact", want: "compact"},
+		{in: "bad", wantErr: true},
+	}
+
+	for _, tt := range tests {
+		t.Run(tt.in, func(t *testing.T) {
+			got, err := normalizeTmuxLayout(tt.in)
+			if tt.wantErr {
+				if err == nil {
+					t.Fatalf("expected error for %q", tt.in)
+				}
+				return
+			}
+			if err != nil {
+				t.Fatalf("unexpected error for %q: %v", tt.in, err)
+			}
+			if got != tt.want {
+				t.Fatalf("normalizeTmuxLayout(%q) = %q, want %q", tt.in, got, tt.want)
+			}
+		})
 	}
 }
 
