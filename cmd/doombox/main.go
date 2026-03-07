@@ -85,7 +85,7 @@ func printRootHelp() {
 	fmt.Println("  doombox harness status [PROJECT_PATH]")
 	fmt.Println("  doombox harness score [PROJECT_PATH]")
 	fmt.Println("  doombox harness report [--json] [--strict] [--min-score 0.70] [PROJECT_PATH]")
-	fmt.Println("  doombox harness flip --baseline BASELINE.json --candidate CANDIDATE.json [--json]")
+	fmt.Println("  doombox harness flip --baseline BASELINE.json --candidate CANDIDATE.json [--json] [--strict]")
 }
 
 func (c *cli) runOpen(args []string) error {
@@ -204,7 +204,7 @@ func printHarnessHelp() {
 	fmt.Println("  doombox harness status [--json] [PROJECT_PATH]")
 	fmt.Println("  doombox harness score [--json] [PROJECT_PATH]")
 	fmt.Println("  doombox harness report [--json] [--strict] [--min-score 0.70] [PROJECT_PATH]")
-	fmt.Println("  doombox harness flip --baseline BASELINE.json --candidate CANDIDATE.json [--json]")
+	fmt.Println("  doombox harness flip --baseline BASELINE.json --candidate CANDIDATE.json [--json] [--strict]")
 }
 
 func (c *cli) runHarnessInit(args []string) error {
@@ -346,6 +346,9 @@ func (c *cli) runHarnessFlip(args []string) error {
 	baselinePath := fs.String("baseline", "", "path to baseline eval-run json")
 	candidatePath := fs.String("candidate", "", "path to candidate eval-run json")
 	jsonOut := fs.Bool("json", false, "print JSON output")
+	strict := fs.Bool("strict", false, "exit non-zero if flip checks fail")
+	maxRegressions := fs.Int("max-regressions", 0, "maximum allowed regressions")
+	requirePositiveDelta := fs.Bool("require-positive-delta", false, "require positive average score delta")
 	if err := fs.Parse(args); err != nil {
 		return err
 	}
@@ -375,6 +378,11 @@ func (c *cli) runHarnessFlip(args []string) error {
 		return nil
 	}
 
+	gate := evaluateFlipGate(report, flipGateOptions{
+		MaxRegressions:       *maxRegressions,
+		RequirePositiveDelta: *requirePositiveDelta,
+	})
+
 	fmt.Println("Doombox Harness Flip Analysis")
 	fmt.Println("=============================")
 	fmt.Printf("Baseline: %s\n", *baselinePath)
@@ -384,6 +392,16 @@ func (c *cli) runHarnessFlip(args []string) error {
 	fmt.Printf("Regressed: %d\n", report.Regressed)
 	fmt.Printf("Unchanged: %d\n", report.Unchanged)
 	fmt.Printf("Avg score delta: %.2f\n", report.DeltaScoreAvg)
+	fmt.Printf("Gate pass: %v\n", gate.Pass)
+	if len(gate.Reasons) > 0 {
+		fmt.Println("Gate reasons:")
+		for _, reason := range gate.Reasons {
+			fmt.Printf("- %s\n", reason)
+		}
+	}
+	if *strict && !gate.Pass {
+		return errors.New("harness flip strict checks failed")
+	}
 	return nil
 }
 
@@ -488,6 +506,16 @@ type harnessHealthOptions struct {
 	MinScore     float64
 	MaxOpenTodos int
 	MaxBlockRisk int
+}
+
+type flipGateOptions struct {
+	MaxRegressions       int
+	RequirePositiveDelta bool
+}
+
+type flipGate struct {
+	Pass    bool
+	Reasons []string
 }
 
 func collectHarnessStatus(projectPath string) (harnessStatus, error) {
@@ -607,6 +635,20 @@ func evaluateHarnessHealth(report harnessReport, opts harnessHealthOptions) harn
 		reasons = append(reasons, fmt.Sprintf("block risk events %d exceed max %d", report.Status.BlockRiskCount, opts.MaxBlockRisk))
 	}
 	return harnessHealth{
+		Pass:    len(reasons) == 0,
+		Reasons: reasons,
+	}
+}
+
+func evaluateFlipGate(report harnessengine.FlipReport, opts flipGateOptions) flipGate {
+	reasons := []string{}
+	if report.Regressed > opts.MaxRegressions {
+		reasons = append(reasons, fmt.Sprintf("regressions %d exceed max %d", report.Regressed, opts.MaxRegressions))
+	}
+	if opts.RequirePositiveDelta && report.DeltaScoreAvg <= 0 {
+		reasons = append(reasons, fmt.Sprintf("average score delta %.2f is not positive", report.DeltaScoreAvg))
+	}
+	return flipGate{
 		Pass:    len(reasons) == 0,
 		Reasons: reasons,
 	}

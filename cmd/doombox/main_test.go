@@ -431,3 +431,20 @@ func TestEvaluateHarnessHealth(t *testing.T) {
 		t.Fatalf("expected 3 health reasons, got %d", len(health.Reasons))
 	}
 }
+
+func TestEvaluateFlipGate(t *testing.T) {
+	report := harnessengine.FlipReport{
+		Regressed:     2,
+		DeltaScoreAvg: -0.10,
+	}
+	gate := evaluateFlipGate(report, flipGateOptions{
+		MaxRegressions:       0,
+		RequirePositiveDelta: true,
+	})
+	if gate.Pass {
+		t.Fatal("expected flip gate to fail")
+	}
+	if len(gate.Reasons) != 2 {
+		t.Fatalf("expected 2 gate reasons, got %d", len(gate.Reasons))
+	}
+}
