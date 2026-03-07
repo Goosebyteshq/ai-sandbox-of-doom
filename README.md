@@ -155,7 +155,7 @@ Provider adapter registry is in `harness/adapters/provider.go`:
 Interactive `doombox open` launches a tmux session inside the container:
 
 - pane 1: selected agent CLI
-- pane 2: harness supervisor script
+- pane 2: harness supervisor HUD (events/checkpoints/todos/risk)
 - pane 3: live `.doombox/events.jsonl` tail
 
 ## Harness testing (no live LLM required)
