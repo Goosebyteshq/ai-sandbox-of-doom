@@ -4,11 +4,10 @@ set -euo pipefail
 
 BIN_DIR="$(mktemp -d)"
 BIN_PATH="${BIN_DIR}/doombox"
-GO_MOD_CACHE="${BIN_DIR}/gomodcache"
 GO_BUILD_CACHE="${BIN_DIR}/gocache"
 trap 'rm -rf "${BIN_DIR}"' EXIT
 
-GOMODCACHE="${GO_MOD_CACHE}" GOCACHE="${GO_BUILD_CACHE}" go build -o "${BIN_PATH}" ./cmd/doombox
+GOCACHE="${GO_BUILD_CACHE}" go build -buildvcs=false -o "${BIN_PATH}" ./cmd/doombox
 
 ROOT_HELP="$("${BIN_PATH}" --help)"
 HARNESS_HELP="$("${BIN_PATH}" harness help)"

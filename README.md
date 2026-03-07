@@ -52,6 +52,7 @@ Ergonomic interactive mode:
 - `doombox open` with missing args opens a project-selection menu.
 - `doombox rm` with missing targets opens a multi-select removal menu.
 - `doombox harness` with no subcommand opens a harness subcommand menu.
+- Menus are arrow-key driven (with checkbox multi-select for remove).
 - Use `-n` / `--non-interactive` to disable prompts.
 
 This project expects global CLI install only (no `go run` workflow).

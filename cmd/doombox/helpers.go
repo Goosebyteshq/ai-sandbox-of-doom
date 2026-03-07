@@ -13,6 +13,8 @@ import (
 	"strconv"
 	"strings"
 
+	"github.com/AlecAivazis/survey/v2"
+	"github.com/AlecAivazis/survey/v2/terminal"
 	harnessadapters "github.com/Goosebyteshq/doombox/harness/adapters"
 )
 
@@ -157,6 +159,20 @@ func isInteractiveTerminal() bool {
 }
 
 func promptInput(label string) (string, error) {
+	if isInteractiveTerminal() {
+		answer := ""
+		prompt := &survey.Input{
+			Message: strings.TrimSpace(label),
+		}
+		if err := survey.AskOne(prompt, &answer); err != nil {
+			if errors.Is(err, terminal.InterruptErr) {
+				return "", errors.New("aborted by user")
+			}
+			return "", err
+		}
+		return strings.TrimSpace(answer), nil
+	}
+
 	fmt.Printf("%s: ", strings.TrimSpace(label))
 	reader := bufio.NewReader(os.Stdin)
 	line, err := reader.ReadString('\n')
@@ -167,6 +183,21 @@ func promptInput(label string) (string, error) {
 }
 
 func promptYesNo(label string) (bool, error) {
+	if isInteractiveTerminal() {
+		answer := false
+		prompt := &survey.Confirm{
+			Message: strings.TrimSpace(label),
+			Default: false,
+		}
+		if err := survey.AskOne(prompt, &answer); err != nil {
+			if errors.Is(err, terminal.InterruptErr) {
+				return false, errors.New("aborted by user")
+			}
+			return false, err
+		}
+		return answer, nil
+	}
+
 	answer, err := promptInput(label + " [y/N]")
 	if err != nil {
 		return false, err
@@ -179,6 +210,27 @@ func promptSelect(label string, options []string) (int, error) {
 	if len(options) == 0 {
 		return 0, errors.New("no options available")
 	}
+
+	if isInteractiveTerminal() {
+		choice := ""
+		prompt := &survey.Select{
+			Message: strings.TrimSpace(label),
+			Options: options,
+		}
+		if err := survey.AskOne(prompt, &choice); err != nil {
+			if errors.Is(err, terminal.InterruptErr) {
+				return 0, errors.New("aborted by user")
+			}
+			return 0, err
+		}
+		for idx, option := range options {
+			if option == choice {
+				return idx, nil
+			}
+		}
+		return 0, fmt.Errorf("invalid selection %q", choice)
+	}
+
 	fmt.Println(label + ":")
 	for i, option := range options {
 		fmt.Printf("  %d. %s\n", i+1, option)
@@ -198,6 +250,40 @@ func promptMultiSelect(label string, options []string) ([]int, error) {
 	if len(options) == 0 {
 		return nil, nil
 	}
+
+	if isInteractiveTerminal() {
+		selectedOptions := []string{}
+		prompt := &survey.MultiSelect{
+			Message: strings.TrimSpace(label),
+			Options: options,
+		}
+		if err := survey.AskOne(prompt, &selectedOptions); err != nil {
+			if errors.Is(err, terminal.InterruptErr) {
+				return nil, errors.New("aborted by user")
+			}
+			return nil, err
+		}
+		if len(selectedOptions) == 0 {
+			return nil, nil
+		}
+		seen := map[int]struct{}{}
+		indices := make([]int, 0, len(selectedOptions))
+		for _, selected := range selectedOptions {
+			for idx, option := range options {
+				if option != selected {
+					continue
+				}
+				if _, ok := seen[idx]; ok {
+					break
+				}
+				seen[idx] = struct{}{}
+				indices = append(indices, idx)
+				break
+			}
+		}
+		return indices, nil
+	}
+
 	fmt.Println(label + ":")
 	for i, option := range options {
 		fmt.Printf("  %d. %s\n", i+1, option)
