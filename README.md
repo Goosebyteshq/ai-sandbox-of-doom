@@ -138,6 +138,12 @@ Provider adapter registry is in `harness/adapters/provider.go`:
 - `gemini`: stub adapter
 - `cloud` (claude alias): stub adapter
 
+Interactive `doombox open` launches a tmux session inside the container:
+
+- pane 1: selected agent CLI
+- pane 2: harness supervisor script
+- pane 3: live `.doombox/events.jsonl` tail
+
 ## Harness testing (no live LLM required)
 
 You can validate harness behavior without calling an LLM:

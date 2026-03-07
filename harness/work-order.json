@@ -183,14 +183,14 @@
     {
       "id": "P5",
       "title": "tmux UX and provider adapters",
-      "status": "in_progress",
+      "status": "done",
       "tasks": [
         {
           "id": "P5-T1",
           "title": "Start tmux session automatically with agent, supervisor, and event panes",
-          "checkbox": "[ ]",
-          "done": false,
-          "status": "todo"
+          "checkbox": "[x]",
+          "done": true,
+          "status": "done"
         },
         {
           "id": "P5-T2",

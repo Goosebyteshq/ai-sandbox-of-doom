@@ -330,8 +330,16 @@ func (c *cli) startOrReuseSession(agent, absPath, projectName string, interactiv
 
 	if interactive {
 		fmt.Printf("Launching %s...\n\n", agent)
+		sessionName := "doombox-" + projectName
+		execArgs := []string{
+			"-p", composeProject,
+			"exec",
+			"-e", "DOOMBOX_AGENT_CMD=" + agentCmd,
+			"-e", "DOOMBOX_TMUX_SESSION=" + sessionName,
+			"ai-dev", "bash", "-lc", "/opt/doombox/harness/scripts/launch_tmux.sh",
+		}
 		return c.runWithHarness(agent, absPath, func() error {
-			return c.compose(composeFile, []string{"-p", composeProject, "exec", "ai-dev", "bash", "-lc", agentCmd}, env)
+			return c.compose(composeFile, execArgs, env)
 		})
 	}
 
