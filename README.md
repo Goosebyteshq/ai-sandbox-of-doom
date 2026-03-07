@@ -8,6 +8,12 @@ Run Claude, Codex, or Gemini in YOLO/unsafe mode inside Docker, with only one pr
 go install github.com/Goosebyteshq/doombox/cmd/doombox@latest
 ```
 
+For local checkout testing:
+
+```bash
+make install
+```
+
 Then use:
 
 ```bash
