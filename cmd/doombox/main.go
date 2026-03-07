@@ -83,6 +83,7 @@ func printRootHelp() {
 	fmt.Println("  doombox list [--all]")
 	fmt.Println("  doombox harness status [PROJECT_PATH]")
 	fmt.Println("  doombox harness score [PROJECT_PATH]")
+	fmt.Println("  doombox harness report [--json] [PROJECT_PATH]")
 	fmt.Println("  doombox harness flip --baseline BASELINE.json --candidate CANDIDATE.json [--json]")
 }
 
@@ -179,6 +180,8 @@ func (c *cli) runHarness(args []string) error {
 		return c.runHarnessStatus(args[1:])
 	case "score":
 		return c.runHarnessScore(args[1:])
+	case "report":
+		return c.runHarnessReport(args[1:])
 	case "flip":
 		return c.runHarnessFlip(args[1:])
 	default:
@@ -334,6 +337,59 @@ func (c *cli) runHarnessFlip(args []string) error {
 	return nil
 }
 
+func (c *cli) runHarnessReport(args []string) error {
+	fs := flag.NewFlagSet("harness report", flag.ContinueOnError)
+	fs.SetOutput(os.Stdout)
+	jsonOut := fs.Bool("json", false, "print JSON output")
+	if err := fs.Parse(args); err != nil {
+		return err
+	}
+
+	projectPath := ""
+	remaining := fs.Args()
+	if len(remaining) > 0 {
+		projectPath = strings.TrimSpace(remaining[0])
+	}
+	if projectPath == "" {
+		cwd, err := os.Getwd()
+		if err != nil {
+			return err
+		}
+		projectPath = cwd
+	}
+
+	absPath, err := filepath.Abs(projectPath)
+	if err != nil {
+		return err
+	}
+	report, err := collectHarnessReport(absPath)
+	if err != nil {
+		return err
+	}
+
+	if *jsonOut {
+		b, err := json.MarshalIndent(report, "", "  ")
+		if err != nil {
+			return err
+		}
+		fmt.Println(string(b))
+		return nil
+	}
+
+	fmt.Println("Doombox Harness Report")
+	fmt.Println("======================")
+	fmt.Printf("Project: %s\n", report.ProjectPath)
+	fmt.Printf("Events file: %s\n", report.EventsPath)
+	fmt.Printf("Checkpoints dir: %s\n", report.CheckpointsPath)
+	fmt.Printf("TODO file: %s\n", report.TodoPath)
+	fmt.Printf("Event count: %d\n", report.Status.EventCount)
+	fmt.Printf("Checkpoint count: %d\n", report.Status.CheckpointCount)
+	fmt.Printf("Open TODOs: %d\n", report.Status.OpenTodos)
+	fmt.Printf("Rubric score: %.2f\n", report.Rubric.Score)
+	fmt.Printf("Safety score: %.2f\n", report.Rubric.Safety)
+	return nil
+}
+
 type harnessStatus struct {
 	EventCount       int    `json:"event_count"`
 	CheckpointCount  int    `json:"checkpoint_count"`
@@ -341,6 +397,16 @@ type harnessStatus struct {
 	BlockRiskCount   int    `json:"block_risk_count"`
 	JustifyRiskCount int    `json:"justify_risk_count"`
 	LastEventType    string `json:"last_event_type"`
+}
+
+type harnessReport struct {
+	ProjectPath     string                         `json:"project_path"`
+	DoomboxPath     string                         `json:"doombox_path"`
+	EventsPath      string                         `json:"events_path"`
+	CheckpointsPath string                         `json:"checkpoints_path"`
+	TodoPath        string                         `json:"todo_path"`
+	Status          harnessStatus                  `json:"status"`
+	Rubric          harnessengine.TrajectoryRubric `json:"rubric"`
 }
 
 func collectHarnessStatus(projectPath string) (harnessStatus, error) {
@@ -408,6 +474,31 @@ func collectHarnessRubric(projectPath string) (harnessengine.TrajectoryRubric, e
 		return harnessengine.TrajectoryRubric{}, err
 	}
 	return harnessengine.ScoreTrajectory(events, checkpoints), nil
+}
+
+func collectHarnessReport(projectPath string) (harnessReport, error) {
+	doomboxDir := filepath.Join(projectPath, ".doombox")
+	eventsPath := filepath.Join(doomboxDir, "events.jsonl")
+	checkpointsPath := filepath.Join(doomboxDir, "checkpoints")
+	todoPath := filepath.Join(doomboxDir, "todo.json")
+
+	status, err := collectHarnessStatus(projectPath)
+	if err != nil {
+		return harnessReport{}, err
+	}
+	rubric, err := collectHarnessRubric(projectPath)
+	if err != nil {
+		return harnessReport{}, err
+	}
+	return harnessReport{
+		ProjectPath:     projectPath,
+		DoomboxPath:     doomboxDir,
+		EventsPath:      eventsPath,
+		CheckpointsPath: checkpointsPath,
+		TodoPath:        todoPath,
+		Status:          status,
+		Rubric:          rubric,
+	}, nil
 }
 
 func collectFlipReport(baselinePath, candidatePath string) (harnessengine.FlipReport, error) {

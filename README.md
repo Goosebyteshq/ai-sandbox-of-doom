@@ -17,6 +17,8 @@ doombox harness status /path/to/project
 doombox harness status --json /path/to/project
 doombox harness score /path/to/project
 doombox harness score --json /path/to/project
+doombox harness report /path/to/project
+doombox harness report --json /path/to/project
 doombox harness flip --baseline baseline.json --candidate candidate.json
 ```
 

@@ -329,3 +329,39 @@ func TestCollectFlipReport(t *testing.T) {
 		t.Fatalf("unexpected regression/improvement counts: regressed=%d improved=%d", report.Regressed, report.Improved)
 	}
 }
+
+func TestCollectHarnessReport(t *testing.T) {
+	projectDir := t.TempDir()
+	doomboxDir := filepath.Join(projectDir, ".doombox")
+	if err := os.MkdirAll(filepath.Join(doomboxDir, "checkpoints"), 0755); err != nil {
+		t.Fatalf("mkdir: %v", err)
+	}
+
+	events := strings.Join([]string{
+		`{"version":1,"timestamp":"2026-03-07T00:00:00Z","event_type":"test_result","source":"hook","payload":{"result":"pass"}}`,
+	}, "\n") + "\n"
+	if err := os.WriteFile(filepath.Join(doomboxDir, "events.jsonl"), []byte(events), 0644); err != nil {
+		t.Fatalf("write events: %v", err)
+	}
+	if err := os.WriteFile(filepath.Join(doomboxDir, "todo.json"), []byte(`{"items":[{"status":"open"}]}`), 0644); err != nil {
+		t.Fatalf("write todo: %v", err)
+	}
+	cp := `{"version":1,"id":"cp-1","timestamp":"2026-03-07T00:02:00Z","agent":"codex","current_goal":"g","files_changed":["a.go"],"out_of_scope_files":[],"next_step_to_scope":"n","non_obvious_file_justifications":[]}`
+	if err := os.WriteFile(filepath.Join(doomboxDir, "checkpoints", "cp-1.json"), []byte(cp), 0644); err != nil {
+		t.Fatalf("write checkpoint: %v", err)
+	}
+
+	report, err := collectHarnessReport(projectDir)
+	if err != nil {
+		t.Fatalf("collectHarnessReport: %v", err)
+	}
+	if report.ProjectPath != projectDir {
+		t.Fatalf("unexpected project path: %q", report.ProjectPath)
+	}
+	if report.Status.OpenTodos != 1 {
+		t.Fatalf("expected open todos=1, got %d", report.Status.OpenTodos)
+	}
+	if report.Rubric.EventCount != 1 {
+		t.Fatalf("expected rubric event count=1, got %d", report.Rubric.EventCount)
+	}
+}
