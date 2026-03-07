@@ -1,0 +1,29 @@
+{
+  "version": 1,
+  "name": "basic-flow",
+  "agent": "codex",
+  "actions": [
+    {
+      "id": "a1",
+      "kind": "edit",
+      "message": "Modify routing logic",
+      "files": [
+        "cmd/doombox/main.go"
+      ]
+    },
+    {
+      "id": "a2",
+      "kind": "test",
+      "message": "Run unit tests",
+      "command": "go test ./...",
+      "result": "pass"
+    },
+    {
+      "id": "a3",
+      "kind": "deny",
+      "message": "Blocked unsafe command",
+      "command": "rm -rf /",
+      "risk": "block"
+    }
+  ]
+}

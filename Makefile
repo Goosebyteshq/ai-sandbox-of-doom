@@ -1,6 +1,6 @@
 SHELL := /bin/bash
 
-.PHONY: install-cli build-cli test fast-check test-integration
+.PHONY: install-cli build-cli test fast-check test-harness-sim test-integration
 
 install-cli:
 	go install ./cmd/doombox
@@ -13,6 +13,9 @@ test:
 
 fast-check:
 	./scripts/check-fast.sh
+
+test-harness-sim:
+	go test ./harness/adapters/mock
 
 test-integration:
 	./scripts/test-integration.sh

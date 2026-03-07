@@ -14,6 +14,8 @@ import (
 	"strings"
 	"sync"
 	"time"
+
+	"github.com/Goosebyteshq/doombox/harness/engine"
 )
 
 type config struct {
@@ -98,6 +100,7 @@ func startSession(agent, projectPath string, out io.Writer) (func(error), error)
 	if err != nil {
 		return nil, err
 	}
+	bus := engine.NewBus(projectPath)
 	if err := appendEvent(projectPath, event{
 		Timestamp: now.Format(time.RFC3339),
 		Type:      "session_start",
@@ -106,7 +109,10 @@ func startSession(agent, projectPath string, out io.Writer) (func(error), error)
 	}); err != nil {
 		return nil, err
 	}
-	_ = ensureAdversarialTodo(projectPath, agent, cfg, now, "session_start")
+	if err := bus.EmitSessionStart(agent, "Codex session started"); err != nil {
+		return nil, err
+	}
+	_ = ensureAdversarialTodo(projectPath, agent, cfg, now, "session_start", bus)
 
 	fmt.Fprintf(out, "Harness: codex logging enabled at %s/.doombox\n", projectPath)
 	fmt.Fprintln(out, "Harness: important decisions should be appended to session-log.jsonl.")
@@ -128,7 +134,7 @@ func startSession(agent, projectPath string, out io.Writer) (func(error), error)
 			case <-stop:
 				return
 			case tick := <-ticker.C:
-				_ = ensureAdversarialTodo(projectPath, agent, cfg, tick.UTC(), "interval_tick")
+				_ = ensureAdversarialTodo(projectPath, agent, cfg, tick.UTC(), "interval_tick", bus)
 			}
 		}
 	}()
@@ -147,6 +153,7 @@ func startSession(agent, projectPath string, out io.Writer) (func(error), error)
 				Agent:     agent,
 				Message:   msg,
 			})
+			_ = bus.EmitSessionEnd(agent, msg)
 		})
 	}
 	return end, nil
@@ -204,6 +211,24 @@ func ensureHarnessFiles(projectPath, agent string, now time.Time) (config, error
 		return config{}, err
 	}
 
+	eventsPath := filepath.Join(dir, "events.jsonl")
+	if _, err := os.Stat(eventsPath); errors.Is(err, os.ErrNotExist) {
+		if err := os.WriteFile(eventsPath, []byte{}, 0644); err != nil {
+			return config{}, err
+		}
+	} else if err != nil {
+		return config{}, err
+	}
+
+	permissionDenialsPath := filepath.Join(dir, "permission-denials.jsonl")
+	if _, err := os.Stat(permissionDenialsPath); errors.Is(err, os.ErrNotExist) {
+		if err := os.WriteFile(permissionDenialsPath, []byte{}, 0644); err != nil {
+			return config{}, err
+		}
+	} else if err != nil {
+		return config{}, err
+	}
+
 	_ = appendEvent(projectPath, event{
 		Timestamp: now.Format(time.RFC3339),
 		Type:      "harness_ready",
@@ -214,7 +239,7 @@ func ensureHarnessFiles(projectPath, agent string, now time.Time) (config, error
 	return cfg, nil
 }
 
-func ensureAdversarialTodo(projectPath, agent string, cfg config, now time.Time, reason string) error {
+func ensureAdversarialTodo(projectPath, agent string, cfg config, now time.Time, reason string, bus *engine.Bus) error {
 	last, err := lastEventTimestamp(projectPath, "adversarial_check_due")
 	if err != nil {
 		return err
@@ -247,12 +272,51 @@ func ensureAdversarialTodo(projectPath, agent string, cfg config, now time.Time,
 		return err
 	}
 
-	return appendEvent(projectPath, event{
+	store := engine.NewCheckpointStore(projectPath)
+	store.SetNow(func() time.Time { return now })
+	checkpoint, checkpointPath, err := store.Write(engine.CheckpointInput{
+		ID:              "cp-" + id,
+		Agent:           agent,
+		CurrentGoal:     "Run adversarial drift check against recent work",
+		FilesChanged:    []string{},
+		OutOfScopeFiles: []string{},
+		NextStepToScope: "Review recent edits and tests, then align next edit with the active task scope.",
+		NonObviousFileJustifications: []engine.CheckpointJustification{
+			{
+				File: ".doombox/todo.json",
+				Why:  "Queued adversarial checkpoint task for supervisor review.",
+			},
+		},
+		RiskLevel: "medium",
+	})
+	if err != nil {
+		return err
+	}
+	checkpointRelPath, relErr := filepath.Rel(projectPath, checkpointPath)
+	if relErr != nil {
+		checkpointRelPath = checkpointPath
+	}
+
+	if err := appendEvent(projectPath, event{
 		Timestamp: now.Format(time.RFC3339),
 		Type:      "adversarial_check_due",
 		Agent:     agent,
 		Message:   "Queued adversarial check (" + reason + ")",
-	})
+	}); err != nil {
+		return err
+	}
+	if bus == nil {
+		return nil
+	}
+	if err := bus.EmitCheckpointDue(agent, "Queued adversarial check ("+reason+")", map[string]any{
+		"checkpoint_type": "adversarial_check",
+		"todo_id":         id,
+		"checkpoint_id":   checkpoint.ID,
+		"reason":          reason,
+	}); err != nil {
+		return err
+	}
+	return bus.EmitCheckpointWritten(agent, checkpoint.ID, checkpointRelPath, "Checkpoint snapshot persisted")
 }
 
 func appendEvent(projectPath string, e event) error {

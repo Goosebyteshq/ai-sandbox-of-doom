@@ -1,0 +1,49 @@
+{
+  "version": 1,
+  "name": "checkpoint-gate-flow",
+  "agent": "codex",
+  "actions": [
+    {
+      "id": "b1",
+      "kind": "edit",
+      "message": "Edit risky file",
+      "files": [
+        ".github/workflows/ci.yml"
+      ]
+    },
+    {
+      "id": "b2",
+      "kind": "checkpoint",
+      "message": "Checkpoint due after risky touch",
+      "payload": {
+        "trigger": "risky_touch"
+      }
+    },
+    {
+      "id": "b3",
+      "kind": "gate",
+      "message": "Pre-commit gate blocked",
+      "payload": {
+        "gate": "pre-commit",
+        "decision": "block",
+        "reason": "missing tests"
+      }
+    },
+    {
+      "id": "b4",
+      "kind": "test",
+      "message": "Run tests after block",
+      "command": "go test ./...",
+      "result": "pass"
+    },
+    {
+      "id": "b5",
+      "kind": "gate",
+      "message": "Pre-commit gate allowed",
+      "payload": {
+        "gate": "pre-commit",
+        "decision": "allow"
+      }
+    }
+  ]
+}

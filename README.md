@@ -76,12 +76,35 @@ When you run `doombox open --agent codex ...`, doombox initializes:
 - `.doombox/harness.json` (provider + interval config)
 - `.doombox/todo.json` (structured task list)
 - `.doombox/session-log.jsonl` (append-only event log)
+- `.doombox/events.jsonl` (typed event bus for supervisor/gates)
+- `.doombox/checkpoints/*.json` (structured checkpoint snapshots)
+- `.doombox/permission-denials.jsonl` (permission-related blocks/approval events)
 
 Session behavior for Codex:
 
-- Writes `session_start` / `session_end` events.
+- Writes `session_start` / `session_end` events to both logs.
+- Emits typed `checkpoint_due` events when adversarial checks are queued.
+- Persists a checkpoint snapshot and emits `checkpoint_written`.
 - Auto-queues an `adversarial_check` TODO when due.
 - Runs a periodic timer (default 10 minutes) while the Codex session is active.
+
+Typed bus writer support is now in `harness/engine/bus.go` with helpers for:
+
+- tool invocations (`tool_invocation`)
+- edit clusters (`edit_cluster`)
+- test results (`test_result`)
+- gate decisions (`gate_decision`)
+
+Action-based checkpoint triggering is implemented in `harness/engine/checkpoint_trigger.go`:
+
+- emits `checkpoint_due` every configurable N action clusters (default 4)
+
+Immediate checkpoint triggering is implemented in `harness/engine/immediate_trigger.go`:
+
+- failing tests
+- risky path touches
+- large diffs
+- pre-commit/pre-push signals
 
 Current defaults are Codex-specific, but the config shape is provider-based so Gemini/Cloud can be added to the same harness flow later.
 
@@ -92,10 +115,17 @@ You can validate harness behavior without calling an LLM:
 - Unit tests in `harness/session_test.go` verify lifecycle, `.doombox` initialization, and adversarial TODO scheduling.
 - `go test ./...` runs both CLI and harness package tests.
 - `make fast-check` runs formatting, vetting, tests, and compose validation.
+- `make test-harness-sim` runs deterministic harness simulator tests only.
 
-Planned next step:
+Current mock harness assets:
 
-- Add a deterministic mock-agent adapter and fixture-driven harness integration tests so supervisor triggers and commit/push gates can be validated in CI with zero model calls.
+- Adapter: `harness/adapters/mock`
+- Example fixture: `harness/fixtures/mock/basic-flow.json`
+- Checkpoint/gate fixture: `harness/fixtures/mock/checkpoint-gate-flow.json`
+- Fixture-driven integration tests: `harness/adapters/mock/mock_integration_test.go`
+- Replay tests from generated `events.jsonl`: `harness/adapters/mock/replay_test.go`
+
+CI also runs the simulator suite in a dedicated `harness-simulator` job.
 
 ## Agent shortcuts
 

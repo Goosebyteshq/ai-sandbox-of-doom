@@ -78,49 +78,49 @@
     {
       "id": "P2",
       "title": "Event-driven supervisor",
-      "status": "todo",
+      "status": "done",
       "tasks": [
         {
           "id": "P2-T1",
           "title": "Implement event bus writer for tool calls, edits, tests, gates",
-          "checkbox": "[ ]",
-          "done": false,
-          "status": "todo"
+          "checkbox": "[x]",
+          "done": true,
+          "status": "done"
         },
         {
           "id": "P2-T2",
           "title": "Implement action-cluster checkpoint trigger every N actions",
-          "checkbox": "[ ]",
-          "done": false,
-          "status": "todo"
+          "checkbox": "[x]",
+          "done": true,
+          "status": "done"
         },
         {
           "id": "P2-T3",
           "title": "Implement immediate checkpoint triggers (test fail, risky touch, large diff, pre-commit, pre-push)",
-          "checkbox": "[ ]",
-          "done": false,
-          "status": "todo"
+          "checkbox": "[x]",
+          "done": true,
+          "status": "done"
         },
         {
           "id": "P2-T4",
           "title": "Persist checkpoint payload with goal, files changed, out-of-scope files, return-to-scope step",
-          "checkbox": "[ ]",
-          "done": false,
-          "status": "todo"
+          "checkbox": "[x]",
+          "done": true,
+          "status": "done"
         }
       ]
     },
     {
       "id": "P3",
       "title": "Safety and permission observability",
-      "status": "todo",
+      "status": "in_progress",
       "tasks": [
         {
           "id": "P3-T1",
           "title": "Add dedicated permission-denials log file",
-          "checkbox": "[ ]",
-          "done": false,
-          "status": "todo"
+          "checkbox": "[x]",
+          "done": true,
+          "status": "done"
         },
         {
           "id": "P3-T2",
@@ -246,7 +246,7 @@
     {
       "id": "P7",
       "title": "Harness testing without LLM",
-      "status": "in_progress",
+      "status": "done",
       "tasks": [
         {
           "id": "P7-T1",
@@ -258,30 +258,30 @@
         {
           "id": "P7-T2",
           "title": "Add mock-agent adapter that emits deterministic scripted actions",
-          "checkbox": "[ ]",
-          "done": false,
-          "status": "todo"
+          "checkbox": "[x]",
+          "done": true,
+          "status": "done"
         },
         {
           "id": "P7-T3",
           "title": "Add fixture-driven integration tests for event triggers and hard gates",
-          "checkbox": "[ ]",
-          "done": false,
-          "status": "todo"
+          "checkbox": "[x]",
+          "done": true,
+          "status": "done"
         },
         {
           "id": "P7-T4",
           "title": "Add replay tests for events.jsonl to validate derived checkpoint/todo state",
-          "checkbox": "[ ]",
-          "done": false,
-          "status": "todo"
+          "checkbox": "[x]",
+          "done": true,
+          "status": "done"
         },
         {
           "id": "P7-T5",
           "title": "Add CI target dedicated to harness simulator tests",
-          "checkbox": "[ ]",
-          "done": false,
-          "status": "todo"
+          "checkbox": "[x]",
+          "done": true,
+          "status": "done"
         }
       ]
     }
