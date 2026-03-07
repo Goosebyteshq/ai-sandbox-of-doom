@@ -174,9 +174,13 @@ func (c *cli) runList(args []string) error {
 
 func (c *cli) runHarness(args []string) error {
 	if len(args) == 0 {
-		return c.runHarnessStatus(nil)
+		printHarnessHelp()
+		return nil
 	}
 	switch strings.ToLower(strings.TrimSpace(args[0])) {
+	case "-h", "--help", "help":
+		printHarnessHelp()
+		return nil
 	case "init":
 		return c.runHarnessInit(args[1:])
 	case "status":
@@ -190,6 +194,17 @@ func (c *cli) runHarness(args []string) error {
 	default:
 		return fmt.Errorf("unknown harness command %q", args[0])
 	}
+}
+
+func printHarnessHelp() {
+	fmt.Println("Doombox Harness Commands")
+	fmt.Println("")
+	fmt.Println("Usage:")
+	fmt.Println("  doombox harness init [--agent codex|gemini|cloud] [PROJECT_PATH]")
+	fmt.Println("  doombox harness status [--json] [PROJECT_PATH]")
+	fmt.Println("  doombox harness score [--json] [PROJECT_PATH]")
+	fmt.Println("  doombox harness report [--json] [PROJECT_PATH]")
+	fmt.Println("  doombox harness flip --baseline BASELINE.json --candidate CANDIDATE.json [--json]")
 }
 
 func (c *cli) runHarnessInit(args []string) error {
