@@ -9,3 +9,7 @@
 *.swp
 *.swo
 *~
+
+# Local Go workspace wiring
+go.work
+go.work.sum

@@ -54,4 +54,7 @@ if [[ -z "${COMPOSE}" ]]; then
 fi
 ${COMPOSE} config >/dev/null
 
+echo "==> go.mod installability guard"
+./scripts/check-no-local-replace.sh
+
 echo "Fast checks passed."

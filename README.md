@@ -38,6 +38,22 @@ If you run `doombox open` without a path, it will use your current directory and
 
 This project expects global CLI install only (no `go run` workflow).
 
+## Local multi-module development (safe)
+
+If you want local multi-module wiring (for example, splitting `harness/` later), use a local Go workspace instead of `replace` in root `go.mod`.
+
+```bash
+go work init .
+go work use ./harness
+# optional explicit mapping:
+go work edit -replace github.com/Goosebyteshq/doombox/harness=./harness
+```
+
+Rules:
+- Keep root `go.mod` free of local `replace ... => ./...` directives.
+- Do not commit `go.work` / `go.work.sum` (they are local-only).
+- `make fast-check` enforces this with `scripts/check-no-local-replace.sh`.
+
 ## Why this setup
 
 - Agents can run with full autonomy in-container.
