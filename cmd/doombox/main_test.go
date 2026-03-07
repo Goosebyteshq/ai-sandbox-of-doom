@@ -491,3 +491,44 @@ func TestRunHarnessExportEvalWritesFile(t *testing.T) {
 		t.Fatalf("expected output file at %s: %v", outPath, err)
 	}
 }
+
+func TestRunHarnessCompare(t *testing.T) {
+	baseline := makeHarnessProject(t, false)
+	candidate := makeHarnessProject(t, false)
+
+	c := &cli{}
+	if err := c.runHarnessCompare([]string{"--run-id", "sample", baseline, candidate}); err != nil {
+		t.Fatalf("runHarnessCompare failed: %v", err)
+	}
+}
+
+func TestRunHarnessCompareStrictFails(t *testing.T) {
+	baseline := makeHarnessProject(t, false)
+	candidate := makeHarnessProject(t, true)
+
+	c := &cli{}
+	err := c.runHarnessCompare([]string{"--strict", "--run-id", "sample", baseline, candidate})
+	if err == nil {
+		t.Fatal("expected strict compare to fail for unhealthy candidate")
+	}
+}
+
+func makeHarnessProject(t *testing.T, withOpenTodo bool) string {
+	t.Helper()
+	projectDir := t.TempDir()
+	doomboxDir := filepath.Join(projectDir, ".doombox")
+	if err := os.MkdirAll(filepath.Join(doomboxDir, "checkpoints"), 0755); err != nil {
+		t.Fatalf("mkdir: %v", err)
+	}
+	if err := os.WriteFile(filepath.Join(doomboxDir, "events.jsonl"), []byte(`{"version":1,"timestamp":"2026-03-07T00:00:00Z","event_type":"test_result","source":"hook","payload":{"result":"pass"}}`+"\n"), 0644); err != nil {
+		t.Fatalf("write events: %v", err)
+	}
+	todoJSON := `{"items":[]}`
+	if withOpenTodo {
+		todoJSON = `{"items":[{"status":"open"}]}`
+	}
+	if err := os.WriteFile(filepath.Join(doomboxDir, "todo.json"), []byte(todoJSON), 0644); err != nil {
+		t.Fatalf("write todo: %v", err)
+	}
+	return projectDir
+}

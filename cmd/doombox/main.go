@@ -86,6 +86,7 @@ func printRootHelp() {
 	fmt.Println("  doombox harness score [PROJECT_PATH]")
 	fmt.Println("  doombox harness report [--json] [--strict] [--min-score 0.70] [PROJECT_PATH]")
 	fmt.Println("  doombox harness export-eval [--out FILE] [PROJECT_PATH]")
+	fmt.Println("  doombox harness compare BASELINE_PATH CANDIDATE_PATH [--json] [--strict]")
 	fmt.Println("  doombox harness flip --baseline BASELINE.json --candidate CANDIDATE.json [--json] [--strict]")
 }
 
@@ -192,6 +193,8 @@ func (c *cli) runHarness(args []string) error {
 		return c.runHarnessReport(args[1:])
 	case "export-eval":
 		return c.runHarnessExportEval(args[1:])
+	case "compare":
+		return c.runHarnessCompare(args[1:])
 	case "flip":
 		return c.runHarnessFlip(args[1:])
 	default:
@@ -208,6 +211,7 @@ func printHarnessHelp() {
 	fmt.Println("  doombox harness score [--json] [PROJECT_PATH]")
 	fmt.Println("  doombox harness report [--json] [--strict] [--min-score 0.70] [PROJECT_PATH]")
 	fmt.Println("  doombox harness export-eval [--out FILE] [PROJECT_PATH]")
+	fmt.Println("  doombox harness compare BASELINE_PATH CANDIDATE_PATH [--json] [--strict]")
 	fmt.Println("  doombox harness flip --baseline BASELINE.json --candidate CANDIDATE.json [--json] [--strict]")
 }
 
@@ -543,6 +547,103 @@ func (c *cli) runHarnessExportEval(args []string) error {
 	return nil
 }
 
+func (c *cli) runHarnessCompare(args []string) error {
+	fs := flag.NewFlagSet("harness compare", flag.ContinueOnError)
+	fs.SetOutput(os.Stdout)
+	jsonOut := fs.Bool("json", false, "print JSON output")
+	strict := fs.Bool("strict", false, "exit non-zero if comparison checks fail")
+	runID := fs.String("run-id", "current", "logical run id used to match baseline/candidate")
+	minScore := fs.Float64("min-score", 0.70, "minimum rubric score required for pass")
+	maxOpenTodos := fs.Int("max-open-todos", 0, "maximum allowed open todos for pass")
+	maxBlockRisks := fs.Int("max-block-risks", 0, "maximum allowed block risk events for pass")
+	maxRegressions := fs.Int("max-regressions", 0, "maximum allowed regressions")
+	requirePositiveDelta := fs.Bool("require-positive-delta", false, "require positive average score delta")
+	if err := fs.Parse(args); err != nil {
+		return err
+	}
+
+	remaining := fs.Args()
+	if len(remaining) < 2 {
+		return errors.New("harness compare requires BASELINE_PATH and CANDIDATE_PATH")
+	}
+
+	baselinePath, err := filepath.Abs(strings.TrimSpace(remaining[0]))
+	if err != nil {
+		return err
+	}
+	candidatePath, err := filepath.Abs(strings.TrimSpace(remaining[1]))
+	if err != nil {
+		return err
+	}
+
+	baselineReport, err := collectHarnessReport(baselinePath)
+	if err != nil {
+		return fmt.Errorf("collect baseline report: %w", err)
+	}
+	baselineReport.Health = evaluateHarnessHealth(baselineReport, harnessHealthOptions{
+		MinScore:     *minScore,
+		MaxOpenTodos: *maxOpenTodos,
+		MaxBlockRisk: *maxBlockRisks,
+	})
+	candidateReport, err := collectHarnessReport(candidatePath)
+	if err != nil {
+		return fmt.Errorf("collect candidate report: %w", err)
+	}
+	candidateReport.Health = evaluateHarnessHealth(candidateReport, harnessHealthOptions{
+		MinScore:     *minScore,
+		MaxOpenTodos: *maxOpenTodos,
+		MaxBlockRisk: *maxBlockRisks,
+	})
+
+	flip := harnessengine.AnalyzeFlips(
+		[]harnessengine.EvalRun{evalRunFromHarnessReportWithHealth(baselineReport, baselineReport.Health, *runID)},
+		[]harnessengine.EvalRun{evalRunFromHarnessReportWithHealth(candidateReport, candidateReport.Health, *runID)},
+	)
+	gate := evaluateFlipGate(flip, flipGateOptions{
+		MaxRegressions:       *maxRegressions,
+		RequirePositiveDelta: *requirePositiveDelta,
+	})
+
+	result := harnessCompare{
+		Baseline:  baselineReport,
+		Candidate: candidateReport,
+		Flip:      flip,
+		Gate:      gate,
+	}
+
+	if *jsonOut {
+		b, err := json.MarshalIndent(result, "", "  ")
+		if err != nil {
+			return err
+		}
+		fmt.Println(string(b))
+	} else {
+		fmt.Println("Doombox Harness Compare")
+		fmt.Println("=======================")
+		fmt.Printf("Baseline: %s\n", baselinePath)
+		fmt.Printf("Candidate: %s\n", candidatePath)
+		fmt.Printf("Baseline score: %.2f (pass=%v)\n", baselineReport.Rubric.Score, baselineReport.Health.Pass)
+		fmt.Printf("Candidate score: %.2f (pass=%v)\n", candidateReport.Rubric.Score, candidateReport.Health.Pass)
+		fmt.Printf("Regressed: %d\n", flip.Regressed)
+		fmt.Printf("Improved: %d\n", flip.Improved)
+		fmt.Printf("Avg score delta: %.2f\n", flip.DeltaScoreAvg)
+		fmt.Printf("Gate pass: %v\n", gate.Pass)
+	}
+
+	if *strict {
+		if !baselineReport.Health.Pass {
+			return errors.New("baseline health checks failed")
+		}
+		if !candidateReport.Health.Pass {
+			return errors.New("candidate health checks failed")
+		}
+		if !gate.Pass {
+			return errors.New("compare flip gate checks failed")
+		}
+	}
+	return nil
+}
+
 type harnessStatus struct {
 	EventCount       int    `json:"event_count"`
 	CheckpointCount  int    `json:"checkpoint_count"`
@@ -582,6 +683,13 @@ type flipGateOptions struct {
 type flipGate struct {
 	Pass    bool
 	Reasons []string
+}
+
+type harnessCompare struct {
+	Baseline  harnessReport            `json:"baseline"`
+	Candidate harnessReport            `json:"candidate"`
+	Flip      harnessengine.FlipReport `json:"flip"`
+	Gate      flipGate                 `json:"gate"`
 }
 
 func collectHarnessStatus(projectPath string) (harnessStatus, error) {
