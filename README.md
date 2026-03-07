@@ -130,6 +130,11 @@ Pre-push gate evaluator is in `harness/engine/prepush_gate.go`:
 
 - blocks push when integration tests are stale/failing under pre-push policy
 
+Trajectory rubric scoring is in `harness/engine/rubric.go`:
+
+- computes scope, test, safety, and efficiency subscores
+- returns a composite score for harness/eval comparisons
+
 Current defaults are Codex-specific, but the config shape is provider-based so Gemini/Cloud can be added to the same harness flow later.
 
 Provider adapter registry is in `harness/adapters/provider.go`:

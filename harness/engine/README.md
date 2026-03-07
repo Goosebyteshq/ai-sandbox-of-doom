@@ -13,6 +13,7 @@ Current implementation:
 - `precommit_gate.go`: harness-managed pre-commit gate evaluator
 - `test_discipline.go`: fast/integration test batch execution helpers
 - `prepush_gate.go`: harness-managed pre-push gate evaluator
+- `rubric.go`: trajectory rubric scoring over events/checkpoints
 - Policy rules come from `.doombox/policy.json`
 - Policy supports sensitive path prefixes
 - Policy supports risky path prefixes
@@ -27,6 +28,7 @@ Current implementation:
 - `precommit_gate_test.go`: unit tests for gate decisions and file classification
 - `test_discipline_test.go`: unit tests for fast/integration test execution
 - `prepush_gate_test.go`: unit tests for pre-push integration gate
+- `rubric_test.go`: unit tests for trajectory scoring and loaders
 
 Supported typed event helpers:
 

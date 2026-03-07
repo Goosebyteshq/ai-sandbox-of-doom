@@ -218,14 +218,14 @@
     {
       "id": "P6",
       "title": "Evaluation and release discipline",
-      "status": "todo",
+      "status": "in_progress",
       "tasks": [
         {
           "id": "P6-T1",
           "title": "Add trajectory rubric scoring over events/checkpoints",
-          "checkbox": "[ ]",
-          "done": false,
-          "status": "todo"
+          "checkbox": "[x]",
+          "done": true,
+          "status": "done"
         },
         {
           "id": "P6-T2",
