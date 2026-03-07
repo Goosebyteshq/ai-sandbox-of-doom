@@ -64,7 +64,7 @@ func printRootHelp() {
 	fmt.Println("AI Sandbox CLI")
 	fmt.Println("")
 	fmt.Println("Usage:")
-	fmt.Println("  doombox open [-n] [--agent claude|codex|gemini] [--layout windows|compact] [--detach] [PROJECT_PATH] [PROJECT_NAME]")
+	fmt.Println("  doombox open [-n] [--agent claude|codex|gemini] [--image IMAGE] [--build] [--layout windows|compact] [--detach] [PROJECT_PATH] [PROJECT_NAME]")
 	fmt.Println("  doombox rm [-n] [--all] [PROJECT_NAME|CONTAINER_NAME|PROJECT_PATH ...]")
 	fmt.Println("  doombox list|ls [--all]")
 	fmt.Println("  doombox harness [-n] <subcommand>")

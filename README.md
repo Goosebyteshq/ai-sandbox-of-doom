@@ -19,6 +19,8 @@ Then use:
 ```bash
 doombox open --agent codex /path/to/project
 doombox open --agent codex --layout windows /path/to/project
+doombox open --agent codex --image ghcr.io/goosebyteshq/doombox:latest /path/to/project
+doombox open --agent codex --build /path/to/project
 doombox rm /path/to/project
 doombox list
 doombox ls
@@ -78,8 +80,10 @@ Rules:
 - Agents can run with full autonomy in-container.
 - Only the project path you pass is bind-mounted to `/workspace/project`.
 - Each project gets its own container runtime and its own home volume.
+- `doombox open` tries to pull a prebuilt image first (fast path), with fallback to local Docker build.
 - Go and Playwright workflows run inside the container.
 - Codex sessions can keep structured JSON context under `.doombox/`.
+- The prebuilt image is published to `ghcr.io/goosebyteshq/doombox:latest` from `main`.
 
 ## What is installed
 
@@ -121,7 +125,14 @@ Start with Gemini in detached mode:
 doombox open --agent gemini -d /path/to/project
 ```
 
+Force local build (skip prebuilt pull):
+
+```bash
+doombox open --build /path/to/project
+```
+
 `doombox open` is the primary and only project session command.
+It prints startup phases with timing (pull/build/start/attach) so users can see progress.
 
 ## Codex Harness (JSON)
 

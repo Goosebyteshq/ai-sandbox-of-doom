@@ -97,12 +97,13 @@ func TestCommandForAgentOverride(t *testing.T) {
 }
 
 func TestComposeEnvContainsIsolationVars(t *testing.T) {
-	env := composeEnv("/repo", "proj-1", "codex")
+	env := composeEnv("/repo", "proj-1", "codex", "ghcr.io/goosebyteshq/doombox:test")
 	joined := strings.Join(env, "\n")
 	for _, want := range []string{
 		"PROJECT_PATH=/repo",
 		"PROJECT_NAME=proj-1",
 		"AGENT=codex",
+		"AI_DEV_IMAGE=ghcr.io/goosebyteshq/doombox:test",
 		"AI_HOME_VOLUME=ai-dev-home-proj-1",
 	} {
 		if !strings.Contains(joined, want) {
@@ -212,6 +213,12 @@ func TestPrintRootHelpOpenOnly(t *testing.T) {
 	}
 	if !strings.Contains(out, "doombox open [-n]") {
 		t.Fatalf("expected root help to include open non-interactive flag, got: %q", out)
+	}
+	if !strings.Contains(out, "--image IMAGE") {
+		t.Fatalf("expected root help to include image flag, got: %q", out)
+	}
+	if !strings.Contains(out, "--build") {
+		t.Fatalf("expected root help to include build flag, got: %q", out)
 	}
 	if !strings.Contains(out, "doombox rm [-n]") {
 		t.Fatalf("expected root help to include rm non-interactive flag, got: %q", out)

@@ -14,6 +14,8 @@ HARNESS_HELP="$("${BIN_PATH}" harness help)"
 
 echo "==> validate root help"
 grep -q "doombox open" <<<"${ROOT_HELP}"
+grep -q -- "--image IMAGE" <<<"${ROOT_HELP}"
+grep -q -- "--build" <<<"${ROOT_HELP}"
 grep -q "doombox rm" <<<"${ROOT_HELP}"
 grep -q "doombox list|ls" <<<"${ROOT_HELP}"
 if grep -q "doombox start" <<<"${ROOT_HELP}"; then

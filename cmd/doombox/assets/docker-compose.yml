@@ -1,6 +1,9 @@
 services:
   ai-dev:
-    build: .
+    image: ${AI_DEV_IMAGE:-ghcr.io/goosebyteshq/doombox:latest}
+    build:
+      context: .
+      dockerfile: Dockerfile
     container_name: ai-dev-${PROJECT_NAME:-my-project}
     volumes:
       # Mount Docker socket for docker-in-docker (optional)

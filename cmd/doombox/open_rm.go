@@ -17,6 +17,9 @@ func (c *cli) runOpen(args []string) error {
 	fs.BoolVar(nonInteractive, "n", false, "disable interactive prompts")
 	agent := fs.String("agent", envOr("AGENT", "claude"), "agent: claude|codex|gemini")
 	fs.StringVar(agent, "a", envOr("AGENT", "claude"), "agent: claude|codex|gemini")
+	imageRef := fs.String("image", envOr("DOOMBOX_IMAGE", defaultDoomboxImage), "container image reference")
+	forceBuild := fs.Bool("build", false, "force local container build instead of pulling prebuilt image")
+	fs.BoolVar(forceBuild, "b", false, "force local container build instead of pulling prebuilt image")
 	layout := fs.String("layout", envOr("DOOMBOX_LAYOUT", "windows"), "tmux layout: windows|compact")
 	detach := fs.Bool("detach", false, "connect if running; otherwise start container and exit")
 	fs.BoolVar(detach, "d", false, "connect if running; otherwise start container and exit")
@@ -82,7 +85,7 @@ func (c *cli) runOpen(args []string) error {
 	}
 
 	fmt.Printf("No running container for project %s. Starting a new one...\n", projectName)
-	return c.startOrReuseSession(*agent, absPath, projectName, *interactive, normalizedLayout)
+	return c.startOrReuseSession(*agent, absPath, projectName, *interactive, normalizedLayout, *imageRef, *forceBuild)
 }
 
 func (c *cli) promptOpenProjectPath() (string, error) {

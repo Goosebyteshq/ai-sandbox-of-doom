@@ -9,6 +9,7 @@ import (
 	"os/exec"
 	"path/filepath"
 	"strings"
+	"time"
 
 	"github.com/Goosebyteshq/doombox/harness"
 )
@@ -16,11 +17,13 @@ import (
 //go:embed assets/*
 var runtimeAssets embed.FS
 
+const defaultDoomboxImage = "ghcr.io/goosebyteshq/doombox:latest"
+
 func (c *cli) runWithHarness(agent, projectPath string, runFn func() error) error {
 	return harness.RunWithSession(agent, projectPath, os.Stdout, runFn)
 }
 
-func (c *cli) startOrReuseSession(agent, absPath, projectName string, interactive bool, layout string) error {
+func (c *cli) startOrReuseSession(agent, absPath, projectName string, interactive bool, layout, imageRef string, forceBuild bool) error {
 	agentCmd, err := commandForAgent(agent, os.Getenv("AGENT_CMD"))
 	if err != nil {
 		return err
@@ -36,7 +39,12 @@ func (c *cli) startOrReuseSession(agent, absPath, projectName string, interactiv
 	}
 	defer cleanup()
 
-	env := composeEnv(absPath, projectName, agent)
+	imageRef = strings.TrimSpace(imageRef)
+	if imageRef == "" {
+		imageRef = defaultDoomboxImage
+	}
+
+	env := composeEnv(absPath, projectName, agent, imageRef)
 	env = append(env, "AI_SANDBOX_RUNTIME_DIR="+runtimeDir)
 	containerName := "ai-dev-" + projectName
 	composeProject := "ai-dev-" + projectName
@@ -46,6 +54,7 @@ func (c *cli) startOrReuseSession(agent, absPath, projectName string, interactiv
 	fmt.Printf("Project Path: %s\n", absPath)
 	fmt.Printf("Project Name: %s\n", projectName)
 	fmt.Printf("Agent: %s\n\n", agent)
+	fmt.Printf("Image: %s\n\n", imageRef)
 
 	running, err := c.containerRunning(containerName)
 	if err != nil {
@@ -55,13 +64,29 @@ func (c *cli) startOrReuseSession(agent, absPath, projectName string, interactiv
 	if running {
 		fmt.Println("Container already running, reusing existing container.")
 	} else {
-		fmt.Println("Building container...")
-		if err := c.compose(composeFile, []string{"-p", composeProject, "build"}, env); err != nil {
-			return err
+		if forceBuild {
+			if err := runPhase("Building local container image", func() error {
+				return c.compose(composeFile, []string{"-p", composeProject, "build"}, env)
+			}); err != nil {
+				return err
+			}
+		} else {
+			pullErr := runPhase(fmt.Sprintf("Pulling prebuilt image %s", imageRef), func() error {
+				return c.run("docker", []string{"pull", imageRef}, nil)
+			})
+			if pullErr != nil {
+				fmt.Println("Prebuilt pull failed. Falling back to local build.")
+				if err := runPhase("Building local container image (fallback)", func() error {
+					return c.compose(composeFile, []string{"-p", composeProject, "build"}, env)
+				}); err != nil {
+					return err
+				}
+			}
 		}
 
-		fmt.Println("Starting container...")
-		if err := c.compose(composeFile, []string{"-p", composeProject, "up", "-d"}, env); err != nil {
+		if err := runPhase("Starting container", func() error {
+			return c.compose(composeFile, []string{"-p", composeProject, "up", "-d", "--no-build"}, env)
+		}); err != nil {
 			return err
 		}
 		fmt.Println("Container started.")
@@ -81,7 +106,9 @@ func (c *cli) startOrReuseSession(agent, absPath, projectName string, interactiv
 			"ai-dev", "bash", "-lc", "/opt/doombox/harness/scripts/launch_tmux.sh",
 		}
 		return c.runWithHarness(agent, absPath, func() error {
-			return c.compose(composeFile, execArgs, env)
+			return runPhase("Attaching tmux session", func() error {
+				return c.compose(composeFile, execArgs, env)
+			})
 		})
 	}
 
@@ -91,15 +118,32 @@ func (c *cli) startOrReuseSession(agent, absPath, projectName string, interactiv
 	return nil
 }
 
-func composeEnv(projectPath, projectName, agent string) []string {
+func composeEnv(projectPath, projectName, agent, imageRef string) []string {
 	env := os.Environ()
+	if strings.TrimSpace(imageRef) == "" {
+		imageRef = defaultDoomboxImage
+	}
 	env = append(env,
 		"PROJECT_PATH="+projectPath,
 		"PROJECT_NAME="+projectName,
 		"AGENT="+agent,
+		"AI_DEV_IMAGE="+imageRef,
 		"AI_HOME_VOLUME=ai-dev-home-"+projectName,
 	)
 	return env
+}
+
+func runPhase(name string, fn func() error) error {
+	start := time.Now()
+	fmt.Printf("[phase] %s...\n", name)
+	err := fn()
+	elapsed := time.Since(start).Round(100 * time.Millisecond)
+	if err != nil {
+		fmt.Printf("[phase] %s failed (%s)\n", name, elapsed)
+		return err
+	}
+	fmt.Printf("[phase] %s done (%s)\n", name, elapsed)
+	return nil
 }
 
 func (c *cli) compose(composeFile string, args []string, env []string) error {
