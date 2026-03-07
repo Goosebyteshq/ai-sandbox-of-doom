@@ -218,7 +218,7 @@
     {
       "id": "P6",
       "title": "Evaluation and release discipline",
-      "status": "in_progress",
+      "status": "done",
       "tasks": [
         {
           "id": "P6-T1",
@@ -237,9 +237,9 @@
         {
           "id": "P6-T3",
           "title": "Add flip analysis report for regressions",
-          "checkbox": "[ ]",
-          "done": false,
-          "status": "todo"
+          "checkbox": "[x]",
+          "done": true,
+          "status": "done"
         }
       ]
     },

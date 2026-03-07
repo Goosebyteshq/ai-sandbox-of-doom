@@ -15,6 +15,7 @@ Current implementation:
 - `prepush_gate.go`: harness-managed pre-push gate evaluator
 - `rubric.go`: trajectory rubric scoring over events/checkpoints
 - `canary.go`: deterministic canary selection for policy rollouts
+- `flip_analysis.go`: baseline vs candidate regression/improvement analysis
 - Policy rules come from `.doombox/policy.json`
 - Policy supports sensitive path prefixes
 - Policy supports risky path prefixes
@@ -31,6 +32,7 @@ Current implementation:
 - `prepush_gate_test.go`: unit tests for pre-push integration gate
 - `rubric_test.go`: unit tests for trajectory scoring and loaders
 - `canary_test.go`: unit tests for canary selection
+- `flip_analysis_test.go`: unit tests for flip/regression reporting
 
 Supported typed event helpers:
 

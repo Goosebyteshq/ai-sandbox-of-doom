@@ -139,6 +139,11 @@ Canary rollout helper is in `harness/engine/canary.go`:
 
 - deterministic policy canary assignment by run id and rollout percent
 
+Flip analysis utility is in `harness/engine/flip_analysis.go`:
+
+- compares baseline vs candidate runs
+- highlights pass->fail regressions and fail->pass improvements
+
 Current defaults are Codex-specific, but the config shape is provider-based so Gemini/Cloud can be added to the same harness flow later.
 
 Provider adapter registry is in `harness/adapters/provider.go`:
