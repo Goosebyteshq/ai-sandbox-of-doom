@@ -238,3 +238,37 @@ func TestCollectHarnessStatus(t *testing.T) {
 		t.Fatalf("expected last event gate_decision, got %q", status.LastEventType)
 	}
 }
+
+func TestCollectHarnessRubric(t *testing.T) {
+	projectDir := t.TempDir()
+	doomboxDir := filepath.Join(projectDir, ".doombox")
+	if err := os.MkdirAll(filepath.Join(doomboxDir, "checkpoints"), 0755); err != nil {
+		t.Fatalf("mkdir: %v", err)
+	}
+
+	events := strings.Join([]string{
+		`{"version":1,"timestamp":"2026-03-07T00:00:00Z","event_type":"test_result","source":"hook","payload":{"result":"pass"}}`,
+		`{"version":1,"timestamp":"2026-03-07T00:01:00Z","event_type":"tool_invocation","source":"agent","risk_classification":"justify","payload":{"command":"git push --force"}}`,
+	}, "\n") + "\n"
+	if err := os.WriteFile(filepath.Join(doomboxDir, "events.jsonl"), []byte(events), 0644); err != nil {
+		t.Fatalf("write events: %v", err)
+	}
+	cp := `{"version":1,"id":"cp-1","timestamp":"2026-03-07T00:02:00Z","agent":"codex","current_goal":"g","files_changed":["a.go"],"out_of_scope_files":[],"next_step_to_scope":"n","non_obvious_file_justifications":[]}`
+	if err := os.WriteFile(filepath.Join(doomboxDir, "checkpoints", "cp-1.json"), []byte(cp), 0644); err != nil {
+		t.Fatalf("write checkpoint: %v", err)
+	}
+
+	rubric, err := collectHarnessRubric(projectDir)
+	if err != nil {
+		t.Fatalf("collectHarnessRubric: %v", err)
+	}
+	if rubric.EventCount != 2 {
+		t.Fatalf("expected 2 events, got %d", rubric.EventCount)
+	}
+	if rubric.CheckpointCount != 1 {
+		t.Fatalf("expected 1 checkpoint, got %d", rubric.CheckpointCount)
+	}
+	if rubric.Score <= 0 {
+		t.Fatalf("expected positive score, got %.2f", rubric.Score)
+	}
+}

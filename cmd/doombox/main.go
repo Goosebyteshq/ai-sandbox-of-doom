@@ -20,6 +20,7 @@ import (
 
 	"github.com/Goosebyteshq/doombox/harness"
 	harnessadapters "github.com/Goosebyteshq/doombox/harness/adapters"
+	harnessengine "github.com/Goosebyteshq/doombox/harness/engine"
 )
 
 type cli struct {
@@ -81,6 +82,7 @@ func printRootHelp() {
 	fmt.Println("  doombox connect [--agent claude|codex|gemini] [--detach] [PROJECT_PATH] [PROJECT_NAME]")
 	fmt.Println("  doombox list [--all]")
 	fmt.Println("  doombox harness status [PROJECT_PATH]")
+	fmt.Println("  doombox harness score [PROJECT_PATH]")
 }
 
 func (c *cli) runOpen(args []string) error {
@@ -174,6 +176,8 @@ func (c *cli) runHarness(args []string) error {
 	switch strings.ToLower(strings.TrimSpace(args[0])) {
 	case "status":
 		return c.runHarnessStatus(args[1:])
+	case "score":
+		return c.runHarnessScore(args[1:])
 	default:
 		return fmt.Errorf("unknown harness command %q", args[0])
 	}
@@ -210,6 +214,41 @@ func (c *cli) runHarnessStatus(args []string) error {
 	fmt.Printf("Risk block events: %d\n", status.BlockRiskCount)
 	fmt.Printf("Risk justify events: %d\n", status.JustifyRiskCount)
 	fmt.Printf("Last event: %s\n", status.LastEventType)
+	return nil
+}
+
+func (c *cli) runHarnessScore(args []string) error {
+	projectPath := ""
+	if len(args) > 0 {
+		projectPath = strings.TrimSpace(args[0])
+	}
+	if projectPath == "" {
+		cwd, err := os.Getwd()
+		if err != nil {
+			return err
+		}
+		projectPath = cwd
+	}
+
+	absPath, err := filepath.Abs(projectPath)
+	if err != nil {
+		return err
+	}
+	score, err := collectHarnessRubric(absPath)
+	if err != nil {
+		return err
+	}
+
+	fmt.Println("Doombox Harness Rubric")
+	fmt.Println("======================")
+	fmt.Printf("Project: %s\n", absPath)
+	fmt.Printf("Score: %.2f\n", score.Score)
+	fmt.Printf("Scope: %.2f\n", score.ScopeDiscipline)
+	fmt.Printf("Test: %.2f\n", score.TestDiscipline)
+	fmt.Printf("Safety: %.2f\n", score.Safety)
+	fmt.Printf("Efficiency: %.2f\n", score.Efficiency)
+	fmt.Printf("Events: %d\n", score.EventCount)
+	fmt.Printf("Checkpoints: %d\n", score.CheckpointCount)
 	return nil
 }
 
@@ -271,6 +310,22 @@ func collectHarnessStatus(projectPath string) (harnessStatus, error) {
 	status.OpenTodos = openTodos
 
 	return status, nil
+}
+
+func collectHarnessRubric(projectPath string) (harnessengine.TrajectoryRubric, error) {
+	doomboxDir := filepath.Join(projectPath, ".doombox")
+	eventsPath := filepath.Join(doomboxDir, "events.jsonl")
+	checkpointsDir := filepath.Join(doomboxDir, "checkpoints")
+
+	events, err := harnessengine.LoadEventsJSONL(eventsPath)
+	if err != nil && !errors.Is(err, os.ErrNotExist) {
+		return harnessengine.TrajectoryRubric{}, err
+	}
+	checkpoints, err := harnessengine.LoadCheckpoints(checkpointsDir)
+	if err != nil && !errors.Is(err, os.ErrNotExist) {
+		return harnessengine.TrajectoryRubric{}, err
+	}
+	return harnessengine.ScoreTrajectory(events, checkpoints), nil
 }
 
 func readEventsJSONL(path string) ([]map[string]any, error) {
