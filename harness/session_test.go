@@ -47,6 +47,9 @@ func TestEnsureHarnessFilesCreatesDefaults(t *testing.T) {
 	if policy.CheckpointEveryActions != 4 {
 		t.Fatalf("expected checkpoint_every_actions=4, got %d", policy.CheckpointEveryActions)
 	}
+	if policy.Canary.Percent != 0 {
+		t.Fatalf("expected canary.percent=0, got %d", policy.Canary.Percent)
+	}
 }
 
 func TestEnsureAdversarialTodoAddsSingleOpenItem(t *testing.T) {

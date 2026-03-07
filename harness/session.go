@@ -25,17 +25,24 @@ type config struct {
 }
 
 type policyFile struct {
-	Version                 int      `json:"version"`
-	Provider                string   `json:"provider"`
-	CheckpointEveryActions  int      `json:"checkpoint_every_actions"`
-	AdversarialIntervalMins int      `json:"adversarial_interval_minutes"`
-	FastTests               []string `json:"fast_tests"`
-	IntegrationTests        []string `json:"integration_tests"`
-	RiskyPaths              []string `json:"risky_paths"`
-	SensitivePaths          []string `json:"sensitive_paths"`
-	BlockedCommandPrefixes  []string `json:"blocked_command_prefixes"`
-	JustifyCommandPrefixes  []string `json:"justify_command_prefixes"`
-	GeneratedFilePatterns   []string `json:"generated_file_patterns"`
+	Version                 int          `json:"version"`
+	Provider                string       `json:"provider"`
+	CheckpointEveryActions  int          `json:"checkpoint_every_actions"`
+	AdversarialIntervalMins int          `json:"adversarial_interval_minutes"`
+	FastTests               []string     `json:"fast_tests"`
+	IntegrationTests        []string     `json:"integration_tests"`
+	RiskyPaths              []string     `json:"risky_paths"`
+	SensitivePaths          []string     `json:"sensitive_paths"`
+	BlockedCommandPrefixes  []string     `json:"blocked_command_prefixes"`
+	JustifyCommandPrefixes  []string     `json:"justify_command_prefixes"`
+	Canary                  canaryPolicy `json:"canary"`
+	GeneratedFilePatterns   []string     `json:"generated_file_patterns"`
+}
+
+type canaryPolicy struct {
+	Enabled bool   `json:"enabled"`
+	Percent int    `json:"percent"`
+	Salt    string `json:"salt"`
 }
 
 type todoFile struct {
@@ -274,6 +281,7 @@ func defaultPolicy(agent string, adversarialIntervalMins int) policyFile {
 		SensitivePaths:          []string{"/etc/", "/root/", ".ssh/", ".aws/", ".gnupg/"},
 		BlockedCommandPrefixes:  []string{"rm -rf /", "mkfs", "dd if=", "shutdown", "reboot"},
 		JustifyCommandPrefixes:  []string{"git push --force", "git reset --hard", "docker system prune", "docker volume rm"},
+		Canary:                  canaryPolicy{Enabled: false, Percent: 0, Salt: "harness-v1"},
 		GeneratedFilePatterns:   []string{"dist/", "vendor/", "*.generated.*"},
 	}
 }

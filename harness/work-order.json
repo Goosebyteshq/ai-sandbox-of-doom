@@ -230,9 +230,9 @@
         {
           "id": "P6-T2",
           "title": "Add canary mode for policy changes",
-          "checkbox": "[ ]",
-          "done": false,
-          "status": "todo"
+          "checkbox": "[x]",
+          "done": true,
+          "status": "done"
         },
         {
           "id": "P6-T3",

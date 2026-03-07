@@ -92,6 +92,23 @@
           "type": "boolean"
         }
       }
+    },
+    "canary": {
+      "type": "object",
+      "additionalProperties": false,
+      "properties": {
+        "enabled": {
+          "type": "boolean"
+        },
+        "percent": {
+          "type": "integer",
+          "minimum": 0,
+          "maximum": 100
+        },
+        "salt": {
+          "type": "string"
+        }
+      }
     }
   }
 }

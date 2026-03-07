@@ -14,6 +14,7 @@ Current implementation:
 - `test_discipline.go`: fast/integration test batch execution helpers
 - `prepush_gate.go`: harness-managed pre-push gate evaluator
 - `rubric.go`: trajectory rubric scoring over events/checkpoints
+- `canary.go`: deterministic canary selection for policy rollouts
 - Policy rules come from `.doombox/policy.json`
 - Policy supports sensitive path prefixes
 - Policy supports risky path prefixes
@@ -29,6 +30,7 @@ Current implementation:
 - `test_discipline_test.go`: unit tests for fast/integration test execution
 - `prepush_gate_test.go`: unit tests for pre-push integration gate
 - `rubric_test.go`: unit tests for trajectory scoring and loaders
+- `canary_test.go`: unit tests for canary selection
 
 Supported typed event helpers:
 

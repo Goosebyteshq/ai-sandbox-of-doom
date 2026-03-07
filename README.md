@@ -135,6 +135,10 @@ Trajectory rubric scoring is in `harness/engine/rubric.go`:
 - computes scope, test, safety, and efficiency subscores
 - returns a composite score for harness/eval comparisons
 
+Canary rollout helper is in `harness/engine/canary.go`:
+
+- deterministic policy canary assignment by run id and rollout percent
+
 Current defaults are Codex-specific, but the config shape is provider-based so Gemini/Cloud can be added to the same harness flow later.
 
 Provider adapter registry is in `harness/adapters/provider.go`:

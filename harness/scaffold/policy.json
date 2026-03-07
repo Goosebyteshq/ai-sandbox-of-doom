@@ -36,6 +36,11 @@
     "docker system prune",
     "docker volume rm"
   ],
+  "canary": {
+    "enabled": false,
+    "percent": 0,
+    "salt": "harness-v1"
+  },
   "generated_file_patterns": [
     "dist/",
     "vendor/",
