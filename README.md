@@ -22,6 +22,11 @@ doombox harness report --json /path/to/project
 doombox harness flip --baseline baseline.json --candidate candidate.json
 ```
 
+`harness flip` accepts:
+- `[]EvalRun`
+- `{"runs":[...]}`
+- `harness report --json` output (single object or array)
+
 If you run `doombox open` without a path, it will use your current directory and ask for explicit confirmation before mounting it.
 
 This project expects global CLI install only (no `go run` workflow).

@@ -520,18 +520,68 @@ func loadEvalRuns(path string) ([]harnessengine.EvalRun, error) {
 	}
 
 	runs := []harnessengine.EvalRun{}
-	if err := json.Unmarshal(b, &runs); err == nil {
+	if err := json.Unmarshal(b, &runs); err == nil && validEvalRuns(runs) {
 		return runs, nil
 	}
 
 	var wrapped struct {
 		Runs []harnessengine.EvalRun `json:"runs"`
 	}
-	if err := json.Unmarshal(b, &wrapped); err == nil && wrapped.Runs != nil {
+	if err := json.Unmarshal(b, &wrapped); err == nil && validEvalRuns(wrapped.Runs) {
 		return wrapped.Runs, nil
 	}
 
+	var singleReport harnessReportSnapshot
+	if err := json.Unmarshal(b, &singleReport); err == nil && (singleReport.ProjectPath != "" || singleReport.Rubric.Score > 0) {
+		return []harnessengine.EvalRun{evalRunFromHarnessReport(singleReport, 0)}, nil
+	}
+
+	var reportList []harnessReportSnapshot
+	if err := json.Unmarshal(b, &reportList); err == nil && reportList != nil {
+		out := make([]harnessengine.EvalRun, 0, len(reportList))
+		for i, report := range reportList {
+			out = append(out, evalRunFromHarnessReport(report, i))
+		}
+		return out, nil
+	}
+
 	return nil, errors.New("unsupported eval-run json format (expected []EvalRun or {\"runs\": [...]})")
+}
+
+type harnessReportSnapshot struct {
+	ProjectPath string `json:"project_path"`
+	Status      struct {
+		OpenTodos      int `json:"open_todos"`
+		BlockRiskCount int `json:"block_risk_count"`
+	} `json:"status"`
+	Rubric struct {
+		Score float64 `json:"score"`
+	} `json:"rubric"`
+}
+
+func evalRunFromHarnessReport(report harnessReportSnapshot, idx int) harnessengine.EvalRun {
+	id := strings.TrimSpace(report.ProjectPath)
+	if id == "" {
+		id = fmt.Sprintf("report-%d", idx+1)
+	}
+	passed := report.Status.OpenTodos == 0 && report.Status.BlockRiskCount == 0 && report.Rubric.Score >= 0.70
+	return harnessengine.EvalRun{
+		ID:          id,
+		Passed:      passed,
+		RubricScore: report.Rubric.Score,
+	}
+}
+
+func validEvalRuns(runs []harnessengine.EvalRun) bool {
+	if len(runs) == 0 {
+		return false
+	}
+	for _, run := range runs {
+		if strings.TrimSpace(run.ID) == "" {
+			return false
+		}
+	}
+	return true
 }
 
 func readEventsJSONL(path string) ([]map[string]any, error) {

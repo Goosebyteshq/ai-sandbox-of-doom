@@ -277,6 +277,8 @@ func TestLoadEvalRuns(t *testing.T) {
 	dir := t.TempDir()
 	arrayPath := filepath.Join(dir, "array.json")
 	wrappedPath := filepath.Join(dir, "wrapped.json")
+	reportPath := filepath.Join(dir, "report.json")
+	reportListPath := filepath.Join(dir, "report-list.json")
 
 	arrayJSON := `[{"id":"a","passed":true,"rubric_score":0.9},{"id":"b","passed":false,"rubric_score":0.2}]`
 	if err := os.WriteFile(arrayPath, []byte(arrayJSON), 0644); err != nil {
@@ -285,6 +287,14 @@ func TestLoadEvalRuns(t *testing.T) {
 	wrappedJSON := `{"runs":[{"id":"c","passed":true,"rubric_score":0.8}]}`
 	if err := os.WriteFile(wrappedPath, []byte(wrappedJSON), 0644); err != nil {
 		t.Fatalf("write wrapped: %v", err)
+	}
+	reportJSON := `{"project_path":"proj-a","status":{"open_todos":0,"block_risk_count":0},"rubric":{"score":0.8}}`
+	if err := os.WriteFile(reportPath, []byte(reportJSON), 0644); err != nil {
+		t.Fatalf("write report: %v", err)
+	}
+	reportListJSON := `[{"project_path":"proj-b","status":{"open_todos":1,"block_risk_count":0},"rubric":{"score":0.9}}]`
+	if err := os.WriteFile(reportListPath, []byte(reportListJSON), 0644); err != nil {
+		t.Fatalf("write report list: %v", err)
 	}
 
 	arrayRuns, err := loadEvalRuns(arrayPath)
@@ -301,6 +311,22 @@ func TestLoadEvalRuns(t *testing.T) {
 	}
 	if len(wrappedRuns) != 1 || wrappedRuns[0].ID != "c" {
 		t.Fatalf("unexpected wrapped runs: %#v", wrappedRuns)
+	}
+
+	reportRuns, err := loadEvalRuns(reportPath)
+	if err != nil {
+		t.Fatalf("loadEvalRuns report: %v", err)
+	}
+	if len(reportRuns) != 1 || reportRuns[0].ID != "proj-a" || !reportRuns[0].Passed {
+		t.Fatalf("unexpected report runs: %#v", reportRuns)
+	}
+
+	reportListRuns, err := loadEvalRuns(reportListPath)
+	if err != nil {
+		t.Fatalf("loadEvalRuns report list: %v", err)
+	}
+	if len(reportListRuns) != 1 || reportListRuns[0].ID != "proj-b" || reportListRuns[0].Passed {
+		t.Fatalf("unexpected report list runs: %#v", reportListRuns)
 	}
 }
 
