@@ -5,6 +5,7 @@ import (
 	"crypto/sha1"
 	"embed"
 	"encoding/hex"
+	"encoding/json"
 	"errors"
 	"flag"
 	"fmt"
@@ -47,6 +48,8 @@ func main() {
 		err = c.runOpen(os.Args[2:])
 	case "list":
 		err = c.runList(os.Args[2:])
+	case "harness":
+		err = c.runHarness(os.Args[2:])
 	case "-h", "--help", "help":
 		printRootHelp()
 		return
@@ -77,6 +80,7 @@ func printRootHelp() {
 	fmt.Println("  doombox start [--agent claude|codex|gemini] [--detach] [PROJECT_PATH] [PROJECT_NAME]")
 	fmt.Println("  doombox connect [--agent claude|codex|gemini] [--detach] [PROJECT_PATH] [PROJECT_NAME]")
 	fmt.Println("  doombox list [--all]")
+	fmt.Println("  doombox harness status [PROJECT_PATH]")
 }
 
 func (c *cli) runOpen(args []string) error {
@@ -161,6 +165,160 @@ func (c *cli) runList(args []string) error {
 		fmt.Printf("%s\t%s\t%s\t%s\n", row.Name, row.Project, row.Status, row.Image)
 	}
 	return nil
+}
+
+func (c *cli) runHarness(args []string) error {
+	if len(args) == 0 {
+		return c.runHarnessStatus(nil)
+	}
+	switch strings.ToLower(strings.TrimSpace(args[0])) {
+	case "status":
+		return c.runHarnessStatus(args[1:])
+	default:
+		return fmt.Errorf("unknown harness command %q", args[0])
+	}
+}
+
+func (c *cli) runHarnessStatus(args []string) error {
+	projectPath := ""
+	if len(args) > 0 {
+		projectPath = strings.TrimSpace(args[0])
+	}
+	if projectPath == "" {
+		cwd, err := os.Getwd()
+		if err != nil {
+			return err
+		}
+		projectPath = cwd
+	}
+
+	absPath, err := filepath.Abs(projectPath)
+	if err != nil {
+		return err
+	}
+	status, err := collectHarnessStatus(absPath)
+	if err != nil {
+		return err
+	}
+
+	fmt.Println("Doombox Harness Status")
+	fmt.Println("======================")
+	fmt.Printf("Project: %s\n", absPath)
+	fmt.Printf("Events: %d\n", status.EventCount)
+	fmt.Printf("Checkpoints: %d\n", status.CheckpointCount)
+	fmt.Printf("Open TODOs: %d\n", status.OpenTodos)
+	fmt.Printf("Risk block events: %d\n", status.BlockRiskCount)
+	fmt.Printf("Risk justify events: %d\n", status.JustifyRiskCount)
+	fmt.Printf("Last event: %s\n", status.LastEventType)
+	return nil
+}
+
+type harnessStatus struct {
+	EventCount       int
+	CheckpointCount  int
+	OpenTodos        int
+	BlockRiskCount   int
+	JustifyRiskCount int
+	LastEventType    string
+}
+
+func collectHarnessStatus(projectPath string) (harnessStatus, error) {
+	doomboxDir := filepath.Join(projectPath, ".doombox")
+	eventsPath := filepath.Join(doomboxDir, "events.jsonl")
+	checkpointsDir := filepath.Join(doomboxDir, "checkpoints")
+	todoPath := filepath.Join(doomboxDir, "todo.json")
+
+	status := harnessStatus{
+		LastEventType: "-",
+	}
+
+	events, err := readEventsJSONL(eventsPath)
+	if err != nil && !errors.Is(err, os.ErrNotExist) {
+		return harnessStatus{}, err
+	}
+	status.EventCount = len(events)
+	for _, ev := range events {
+		if risk, _ := ev["risk_classification"].(string); risk == "block" {
+			status.BlockRiskCount++
+		}
+		if risk, _ := ev["risk_classification"].(string); risk == "justify" {
+			status.JustifyRiskCount++
+		}
+	}
+	if len(events) > 0 {
+		if lastType, _ := events[len(events)-1]["event_type"].(string); strings.TrimSpace(lastType) != "" {
+			status.LastEventType = lastType
+		}
+	}
+
+	checkpointFiles, err := os.ReadDir(checkpointsDir)
+	if err != nil && !errors.Is(err, os.ErrNotExist) {
+		return harnessStatus{}, err
+	}
+	for _, entry := range checkpointFiles {
+		if entry.IsDir() {
+			continue
+		}
+		if strings.HasSuffix(strings.ToLower(entry.Name()), ".json") {
+			status.CheckpointCount++
+		}
+	}
+
+	openTodos, err := countOpenTodos(todoPath)
+	if err != nil && !errors.Is(err, os.ErrNotExist) {
+		return harnessStatus{}, err
+	}
+	status.OpenTodos = openTodos
+
+	return status, nil
+}
+
+func readEventsJSONL(path string) ([]map[string]any, error) {
+	f, err := os.Open(path)
+	if err != nil {
+		return nil, err
+	}
+	defer f.Close()
+
+	out := []map[string]any{}
+	scanner := bufio.NewScanner(f)
+	for scanner.Scan() {
+		line := strings.TrimSpace(scanner.Text())
+		if line == "" {
+			continue
+		}
+		var ev map[string]any
+		if err := json.Unmarshal([]byte(line), &ev); err != nil {
+			continue
+		}
+		out = append(out, ev)
+	}
+	if err := scanner.Err(); err != nil {
+		return nil, err
+	}
+	return out, nil
+}
+
+func countOpenTodos(path string) (int, error) {
+	b, err := os.ReadFile(path)
+	if err != nil {
+		return 0, err
+	}
+	var parsed struct {
+		Items []struct {
+			Status string `json:"status"`
+		} `json:"items"`
+	}
+	if err := json.Unmarshal(b, &parsed); err != nil {
+		return 0, err
+	}
+	open := 0
+	for _, item := range parsed.Items {
+		if strings.EqualFold(strings.TrimSpace(item.Status), "open") {
+			open++
+		}
+	}
+	return open, nil
 }
 
 func commandForAgent(agent, override string) (string, error) {

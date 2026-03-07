@@ -195,3 +195,46 @@ func TestParseDoomboxContainerRows(t *testing.T) {
 		t.Fatalf("unexpected second project: %q", rows[1].Project)
 	}
 }
+
+func TestCollectHarnessStatus(t *testing.T) {
+	projectDir := t.TempDir()
+	doomboxDir := filepath.Join(projectDir, ".doombox")
+	if err := os.MkdirAll(filepath.Join(doomboxDir, "checkpoints"), 0755); err != nil {
+		t.Fatalf("mkdir: %v", err)
+	}
+
+	events := strings.Join([]string{
+		`{"event_type":"session_start","risk_classification":"safe"}`,
+		`{"event_type":"tool_invocation","risk_classification":"justify"}`,
+		`{"event_type":"gate_decision","risk_classification":"block"}`,
+	}, "\n") + "\n"
+	if err := os.WriteFile(filepath.Join(doomboxDir, "events.jsonl"), []byte(events), 0644); err != nil {
+		t.Fatalf("write events: %v", err)
+	}
+	if err := os.WriteFile(filepath.Join(doomboxDir, "todo.json"), []byte(`{"items":[{"status":"open"},{"status":"closed"},{"status":"open"}]}`), 0644); err != nil {
+		t.Fatalf("write todo: %v", err)
+	}
+	if err := os.WriteFile(filepath.Join(doomboxDir, "checkpoints", "cp-1.json"), []byte(`{}`), 0644); err != nil {
+		t.Fatalf("write checkpoint: %v", err)
+	}
+
+	status, err := collectHarnessStatus(projectDir)
+	if err != nil {
+		t.Fatalf("collectHarnessStatus: %v", err)
+	}
+	if status.EventCount != 3 {
+		t.Fatalf("expected 3 events, got %d", status.EventCount)
+	}
+	if status.OpenTodos != 2 {
+		t.Fatalf("expected 2 open todos, got %d", status.OpenTodos)
+	}
+	if status.CheckpointCount != 1 {
+		t.Fatalf("expected 1 checkpoint, got %d", status.CheckpointCount)
+	}
+	if status.JustifyRiskCount != 1 || status.BlockRiskCount != 1 {
+		t.Fatalf("unexpected risk counts: justify=%d block=%d", status.JustifyRiskCount, status.BlockRiskCount)
+	}
+	if status.LastEventType != "gate_decision" {
+		t.Fatalf("expected last event gate_decision, got %q", status.LastEventType)
+	}
+}
